@@ -1,0 +1,79 @@
+# Multi-stage Dockerfile for Document Information Extractor
+# Stage 1: Base image with system dependencies
+FROM python:3.11-slim AS base
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    g++ \
+    libpq-dev \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Stage 2: Development image
+FROM base AS development
+
+# Copy requirements first for better caching
+COPY autoglean/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p storage/documents storage/temp logs
+
+# Create non-root user
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Expose ports
+EXPOSE 8000
+
+# Default command (can be overridden in docker-compose)
+CMD ["uvicorn", "autoglean.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# Stage 3: Production image (optimized)
+FROM python:3.11-slim AS production
+
+# Install only runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy requirements and install
+COPY autoglean/requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Create non-root user
+RUN useradd -m -u 1000 appuser
+
+# Copy application code
+COPY --chown=appuser:appuser autoglean/ ./autoglean/
+COPY --chown=appuser:appuser config/ ./config/
+
+# Create necessary directories
+RUN mkdir -p storage/documents storage/temp logs && \
+    chown -R appuser:appuser storage logs
+
+# Switch to non-root user
+USER appuser
+
+# Add Python user packages to PATH
+ENV PATH=/home/appuser/.local/bin:$PATH
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+EXPOSE 8000
+
+CMD ["uvicorn", "autoglean.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

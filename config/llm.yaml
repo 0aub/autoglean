@@ -1,0 +1,92 @@
+# LLM Provider Configuration for Document Extraction
+#
+# Define available LLM providers with multimodal support.
+# Extractors reference these by name in extractors.yaml
+
+# Available LLM Providers
+providers:
+  # ===== Cloud Providers =====
+
+  # Google Gemini 2.0 Flash Lite - Most efficient for quota
+  gemini-flash-lite:
+    provider: "gemini"
+    model: "gemini/gemini-2.0-flash-lite"
+    api_key: ${GOOGLE_API_KEY}
+    max_input_tokens: 1048576
+    max_output_tokens: 8192
+    supports_vision: true
+
+  # Google Gemini 2.0 Flash - Multimodal (Primary)
+  gemini-flash:
+    provider: "gemini"
+    model: "gemini/gemini-2.5-flash"
+    api_key: ${GOOGLE_API_KEY}
+    max_input_tokens: 1048576
+    max_output_tokens: 8192
+    supports_vision: true
+
+  # Google Gemini Pro - Higher quality multimodal
+  gemini-pro:
+    provider: "gemini"
+    model: "gemini/gemini-1.5-pro"
+    api_key: ${GOOGLE_API_KEY}
+    supports_vision: true
+
+  # OpenAI GPT-4 Vision
+  gpt4-vision:
+    provider: "openai"
+    model: "gpt-4-vision-preview"
+    api_key: ${OPENAI_API_KEY:}
+    supports_vision: true
+
+  # OpenAI GPT-4o (multimodal)
+  gpt4o:
+    provider: "openai"
+    model: "gpt-4o"
+    api_key: ${OPENAI_API_KEY:}
+    supports_vision: true
+
+  # Anthropic Claude 3.5 Sonnet (vision support)
+  claude:
+    provider: "anthropic"
+    model: "claude-3-5-sonnet-20241022"
+    api_key: ${ANTHROPIC_API_KEY:}
+    supports_vision: true
+
+  # ===== Local Models =====
+
+  # Ollama - LLaVA for Vision/OCR (Stage 1: Extract text from images)
+  ollama-llava:
+    provider: "ollama"
+    model: "llava:13b"
+    api_base: "http://ollama:11434"
+    supports_vision: true
+    max_input_tokens: 4096
+    max_output_tokens: 2000
+
+  # TGI - Gemma 2B for Text Processing (Stage 2: Parse and structure)
+  tgi-gemma:
+    provider: "openai"
+    model: "tgi"
+    api_base: "http://docuinfo-tgi:80/v1"
+    api_key: "dummy"
+    supports_vision: false
+    max_input_tokens: 4096
+    max_output_tokens: 2000
+
+  # LM Studio - Local models
+  lm-studio:
+    provider: "openai"
+    model: "local-model"
+    api_base: "http://localhost:1234/v1"
+    supports_vision: false
+
+# Global settings
+settings:
+  timeout: 120
+  max_retries: 3
+  retry_delay: 2
+  exponential_backoff: true
+
+# Default model for extractors
+default_model: "gemini-flash"

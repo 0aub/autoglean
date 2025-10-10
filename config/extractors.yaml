@@ -1,0 +1,100 @@
+# Document Extractor Configurations
+# Define extraction rules/recipes here
+
+extractors:
+  # Sample extractors (matching UI defaults)
+
+  coordinates:
+    id: "coordinates"
+    name: "Extract Coordinates"
+    icon: "Map"
+    description: "Extracts location data from maps and documents"
+    llm: "gemini-flash"
+    prompt: |
+      You are an advanced document analysis agent. Your sole purpose is to find and extract all tabular coordinate data from a document.
+
+      Your output must follow these strict rules to produce a single, consistent JSON result:
+
+      1.  **Objective:**
+          - Identify every table in the document that contains geographic coordinate data (e.g., Latitude/Longitude, Easting/Northing, X/Y, etc.).
+          - Extract **all rows** from every such table.
+
+      2.  **Unified Output Format:**
+          - All coordinate data, regardless of the table source, must be merged into **one standard JSON array** under a single key:  
+            `"coordinates"`.
+          - The final structure must look like this:
+      ```json
+      {
+        "coordinates": [
+          {
+            "point": "P1",
+            "latitude": "27.30589795",
+            "longitude": "48.37842866",
+            "easting": "240554.9941",
+            "northing": "3023041.053",
+            "source_table": "coordinate_system_utm_wgs84_zone_39"
+          },
+          {
+            "point": "P2",
+            "latitude": "27.30611537",
+            "longitude": "48.38316858",
+            "easting": "241024.7781",
+            "northing": "3023055.301",
+            "source_table": "decimal_degrees"
+          }
+        ]
+      }
+    output_format: "json"
+    temperature: 0.1
+    max_tokens: 8000
+
+  dates:
+    id: "dates"
+    name: "Extract Dates"
+    icon: "Calendar"
+    description: "Identifies and formats dates consistently"
+    llm: "gemini-flash-lite"
+    prompt: |
+      Find and extract all dates mentioned in the document.
+
+      For each date found:
+      - Original format in document
+      - Normalized ISO 8601 format (YYYY-MM-DD)
+      - Context or description
+
+      Format your response as a markdown table.
+
+    output_format: "markdown"
+    temperature: 0.3
+    max_tokens: 2000
+
+  entities:
+    id: "entities"
+    name: "Extract Entities"
+    icon: "Home"
+    description: "Finds organization and business names"
+    llm: "gemini-flash-lite"
+    prompt: |
+      Identify and extract all company names, organizations, and business entities mentioned in the document.
+
+      For each entity:
+      - Entity name
+      - Type (company, organization, institution, etc.)
+      - Context or role mentioned
+
+      Format your response as a markdown list with clear sections.
+
+    output_format: "markdown"
+    temperature: 0.3
+    max_tokens: 2000
+
+# Settings
+settings:
+  # Whether to save results to file
+  save_results: true
+
+  # Result file naming pattern
+  result_filename_pattern: "{extractor_id}_{timestamp}.md"
+
+  # Maximum concurrent extraction jobs
+  max_concurrent_jobs: 3

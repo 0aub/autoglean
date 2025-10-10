@@ -1,0 +1,98 @@
+services:
+  # API Service
+  api:
+    build:
+      context: .
+      dockerfile: docker/autoglean/Dockerfile.api
+      target: development
+    container_name: autoglean-api
+    command: uvicorn autoglean.api.main:app --host ${API_HOST} --port ${API_PORT} --reload
+    volumes:
+      - ./autoglean:/app/autoglean
+      - ./config:/app/config
+      - ./storage:/app/storage
+      - ./logs:/app/logs
+    ports:
+      - "${API_PORT}:${API_PORT}"
+    environment:
+      - APP_ENV=${APP_ENV}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - LLM_MOCK_MODE=${LLM_MOCK_MODE}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - autoglean-network
+
+  # Celery Worker
+  worker:
+    build:
+      context: .
+      dockerfile: docker/autoglean/Dockerfile.api
+      target: development
+    container_name: autoglean-worker
+    command: celery -A autoglean.api.celery_app worker --loglevel=${CELERY_LOG_LEVEL} --concurrency=${CELERY_WORKER_CONCURRENCY}
+    volumes:
+      - ./autoglean:/app/autoglean
+      - ./config:/app/config
+      - ./storage:/app/storage
+      - ./logs:/app/logs
+    environment:
+      - APP_ENV=${APP_ENV}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - LLM_MOCK_MODE=${LLM_MOCK_MODE}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - autoglean-network
+
+  # Redis (Message Broker & Result Backend for Celery)
+  redis:
+    image: redis:alpine
+    container_name: autoglean-redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - autoglean-network
+
+  # UI (React + Vite)
+  ui:
+    build:
+      context: ./ui
+      dockerfile: ../docker/ui/Dockerfile.ui
+    container_name: autoglean-ui
+    volumes:
+      - ./ui:/app
+      - /app/node_modules
+    ports:
+      - "${UI_PORT}:8080"
+    environment:
+      - VITE_API_URL=http://localhost:${API_PORT}
+    depends_on:
+      - api
+    networks:
+      - autoglean-network
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+
+networks:
+  autoglean-network:
+    driver: bridge

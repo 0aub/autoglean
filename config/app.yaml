@@ -1,0 +1,33 @@
+application:
+  name: "Document Information Extractor"
+  version: "1.0.0"
+  environment: ${APP_ENV:development}
+  debug: true
+
+paths:
+  documents_input: "storage/documents"
+  results_output: "storage/results"
+  logs: "logs"
+  temp: "storage/temp"
+
+processing:
+  max_file_size_mb: 500
+  supported_formats:
+    - pdf
+    - doc
+    - docx
+    - txt
+    - jpg
+    - jpeg
+    - png
+    - gif
+    - bmp
+    - tiff
+
+  # Document processing settings
+  image:
+    max_resolution: 4096  # Max width/height in pixels
+    compression_quality: 85
+
+  text:
+    max_length_chars: 100000  # Max characters per document

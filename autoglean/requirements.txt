@@ -1,0 +1,25 @@
+# Core Python
+python-dotenv==1.0.0
+pyyaml==6.0.1
+
+# LLM and AI
+litellm>=1.57.10
+
+# FastAPI and Web
+fastapi>=0.118.0
+uvicorn[standard]>=0.34.0
+python-multipart>=0.0.20
+
+# Async Task Queue
+celery==5.3.6
+redis==5.0.1
+
+# Utilities
+httpx==0.26.0
+
+# Logging
+python-json-logger==2.0.7
+
+# Image processing (for multimodal)
+Pillow>=10.0.0
+pdf2image>=1.16.0

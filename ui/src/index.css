@@ -1,0 +1,140 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Inspired by naama.sa - emerald greens with golden yellow accent */
+    --background: 0 0% 100%;
+    --foreground: 155 30% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 155 30% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 155 30% 15%;
+
+    /* Light & dark green from naama.sa */
+    --primary: 155 65% 35%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 155 50% 55%;
+    --primary-dark: 155 80% 25%;
+
+    /* Golden yellow accent */
+    --secondary: 45 95% 55%;
+    --secondary-foreground: 155 30% 15%;
+    --secondary-light: 45 90% 65%;
+
+    --muted: 155 15% 95%;
+    --muted-foreground: 155 10% 45%;
+
+    --accent: 155 20% 94%;
+    --accent-foreground: 155 30% 15%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 155 15% 88%;
+    --input: 155 15% 90%;
+    --ring: 155 65% 35%;
+
+    --radius: 1rem;
+
+    /* Sidebar specific colors */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 155 30% 15%;
+    --sidebar-primary: 155 65% 35%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 155 40% 97%;
+    --sidebar-accent-foreground: 155 70% 25%;
+    --sidebar-border: 155 15% 92%;
+    --sidebar-ring: 155 65% 35%;
+
+    /* Custom gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(155, 65%, 35%), hsl(155, 50%, 55%));
+    --gradient-secondary: linear-gradient(135deg, hsl(45, 95%, 55%), hsl(45, 90%, 65%));
+    --gradient-subtle: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(155, 20%, 98%));
+    
+    /* Custom shadows */
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --shadow-glow: 0 0 24px hsla(155, 65%, 35%, 0.15);
+  }
+
+  .dark {
+    --background: 155 25% 8%;
+    --foreground: 155 10% 95%;
+
+    --card: 155 20% 10%;
+    --card-foreground: 155 10% 95%;
+
+    --popover: 155 20% 10%;
+    --popover-foreground: 155 10% 95%;
+
+    --primary: 155 65% 40%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 155 50% 60%;
+    --primary-dark: 155 80% 30%;
+
+    --secondary: 45 95% 60%;
+    --secondary-foreground: 155 25% 8%;
+    --secondary-light: 45 90% 70%;
+
+    --muted: 155 15% 18%;
+    --muted-foreground: 155 10% 65%;
+
+    --accent: 155 15% 16%;
+    --accent-foreground: 155 10% 95%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 155 10% 95%;
+
+    --border: 155 15% 20%;
+    --input: 155 15% 20%;
+    --ring: 155 65% 40%;
+
+    /* Sidebar specific colors - dark */
+    --sidebar-background: 155 20% 10%;
+    --sidebar-foreground: 155 10% 90%;
+    --sidebar-primary: 155 65% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 155 40% 15%;
+    --sidebar-accent-foreground: 155 50% 75%;
+    --sidebar-border: 155 15% 18%;
+    --sidebar-ring: 155 65% 40%;
+
+    /* Custom gradients - dark */
+    --gradient-primary: linear-gradient(135deg, hsl(155, 65%, 40%), hsl(155, 50%, 60%));
+    --gradient-secondary: linear-gradient(135deg, hsl(45, 95%, 60%), hsl(45, 90%, 70%));
+    --gradient-subtle: linear-gradient(180deg, hsl(155, 25%, 8%), hsl(155, 20%, 12%));
+    
+    /* Custom shadows - dark */
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-glow: 0 0 24px hsla(155, 65%, 40%, 0.25);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  /* RTL Support */
+  [dir="rtl"] {
+    direction: rtl;
+  }
+
+  [dir="ltr"] {
+    direction: ltr;
+  }
+}
