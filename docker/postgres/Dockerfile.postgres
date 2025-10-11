@@ -1,0 +1,11 @@
+FROM postgres:16-alpine
+
+# Install extensions if needed
+RUN apk add --no-cache postgresql-contrib
+
+# Set default encoding
+ENV POSTGRES_INITDB_ARGS="--encoding=UTF8 --locale=en_US.UTF-8"
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
+    CMD pg_isready -U ${POSTGRES_USER:-autoglean} || exit 1

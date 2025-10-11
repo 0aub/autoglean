@@ -58,7 +58,11 @@ All colors MUST be HSL.
     --gradient-primary: linear-gradient(135deg, hsl(155, 65%, 35%), hsl(155, 50%, 55%));
     --gradient-secondary: linear-gradient(135deg, hsl(45, 95%, 55%), hsl(45, 90%, 65%));
     --gradient-subtle: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(155, 20%, 98%));
-    
+
+    /* Text gradients for titles */
+    --gradient-text-primary: linear-gradient(to right, #86efac, #a3f7bf, #4ade80);
+    --gradient-text-header: linear-gradient(to right, #86efac, #a3f7bf);
+
     /* Custom shadows */
     --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04);
     --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.08);
@@ -111,7 +115,11 @@ All colors MUST be HSL.
     --gradient-primary: linear-gradient(135deg, hsl(155, 65%, 40%), hsl(155, 50%, 60%));
     --gradient-secondary: linear-gradient(135deg, hsl(45, 95%, 60%), hsl(45, 90%, 70%));
     --gradient-subtle: linear-gradient(180deg, hsl(155, 25%, 8%), hsl(155, 20%, 12%));
-    
+
+    /* Text gradients for titles - dark (same as light for consistency) */
+    --gradient-text-primary: linear-gradient(to right, #86efac, #a3f7bf, #4ade80);
+    --gradient-text-header: linear-gradient(to right, #86efac, #a3f7bf);
+
     /* Custom shadows - dark */
     --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.5);
@@ -126,15 +134,17 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Almarai', 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
 
   /* RTL Support */
   [dir="rtl"] {
     direction: rtl;
+    font-family: 'Almarai', 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
 
   [dir="ltr"] {
     direction: ltr;
+    font-family: 'Almarai', 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
 }

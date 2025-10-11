@@ -23,3 +23,15 @@ python-json-logger==2.0.7
 # Image processing (for multimodal)
 Pillow>=10.0.0
 pdf2image>=1.16.0
+
+# Database (PostgreSQL + SQLAlchemy 2.0)
+sqlalchemy==2.0.43
+alembic==1.16.5
+psycopg[binary]==3.2.10
+psycopg2-binary==2.9.11
+
+# Authentication
+pyjwt==2.10.1
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.5.0
+bcrypt==4.3.0

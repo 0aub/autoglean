@@ -30,13 +30,13 @@ export const MainContent = ({ activeExtractor }: MainContentProps) => {
       </div>
 
       {/* Content Layer */}
-      <div className="relative z-10 h-full flex items-center justify-center p-8">
-        <div className="text-center max-w-2xl animate-fade-in mt-32">
-          <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary via-primary-light to-secondary bg-clip-text text-transparent">
+      <div className="relative z-10 h-full flex items-center justify-center p-8 pb-16">
+        <div className="text-center max-w-2xl animate-fade-in mt-48">
+          <h2 className="text-4xl font-bold mb-6 pb-1 bg-gradient-to-r from-primary via-primary-light to-secondary bg-clip-text text-transparent leading-relaxed">
             {t('tagline')}
           </h2>
-          
-          <p className="text-muted-foreground text-lg leading-relaxed">
+
+          <p className="text-muted-foreground text-lg leading-relaxed pb-2">
             {t('createFirst')}
           </p>
         </div>

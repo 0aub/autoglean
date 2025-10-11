@@ -2,13 +2,18 @@ import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { UploadCloud, Play, File, Zap, Map, Calendar, Home, Search, Circle, LucideIcon, Copy, FileText, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { UploadCloud, Play, File, Zap, Map, Calendar, Home, Search, Circle, LucideIcon, Copy, FileText, Loader2, Lock, Share2, Star, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Extractor, ExtractedResult } from "@/types/extractor";
 import { uploadFile, startExtraction, pollTaskStatus } from "@/services/api";
 import { toast } from "sonner";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { ShareExtractorDialog } from "./ShareExtractorDialog";
+import { RateExtractorDialog } from "./RateExtractorDialog";
+import { VersionHistoryDialog } from "./VersionHistoryDialog";
+import { getCachedResult, setCachedResult } from "@/lib/cache";
 
 // Icon mapping for lucide icons
 const iconMap: Record<string, LucideIcon> = {
@@ -25,7 +30,8 @@ interface ExtractorViewProps {
 }
 
 export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { user } = useAuth();
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [results, setResults] = useState<ExtractedResult[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -33,8 +39,27 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
   const [processingStatus, setProcessingStatus] = useState<string>('');
   const [selectedResultIndex, setSelectedResultIndex] = useState<number>(0);
   const [filePreviewContent, setFilePreviewContent] = useState<string>('');
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [isRateDialogOpen, setIsRateDialogOpen] = useState(false);
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
 
   const IconComponent = iconMap[extractor.icon] || File;
+
+  // Check if current user owns this extractor
+  const isOwner = user?.id === extractor.owner_id;
+
+  // Check if user can rate (only public extractors that user doesn't own)
+  const canRate = extractor.visibility === 'public' && !isOwner;
+
+  // Check if history should be shown (public extractors)
+  const showHistory = extractor.visibility === 'public';
+
+  // Get display names based on language
+  const displayName = language === 'en' ? extractor.name_en : extractor.name_ar;
+  const displayDescription = language === 'en' ? extractor.description_en : extractor.description_ar;
+  const ownerName = language === 'en' ? extractor.owner_name_en : extractor.owner_name_ar;
+  const ownerDepartment = language === 'en' ? extractor.owner_department_name_en : extractor.owner_department_name_ar;
+  const ownerGM = language === 'en' ? extractor.owner_gm_name_en : extractor.owner_gm_name_ar;
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (isProcessing) return; // Lock during processing
@@ -101,26 +126,63 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
       // Process each uploaded file
       for (const file of uploadedFiles) {
         setCurrentProcessingFile(file.name);
-        setProcessingStatus('Reading file...');
+        setProcessingStatus(language === 'en' ? 'Checking cache...' : 'فحص ذاكرة التخزين المؤقت...');
 
         // Read the original file content for preview
         const originalContent = await readFileContent(file);
 
-        setProcessingStatus('Uploading...');
+        // Check if we have a cached result for this file + extractor combination
+        const cachedResult = await getCachedResult(
+          file,
+          extractor.extractor_id,
+          extractor.updated_at
+        );
+
+        if (cachedResult) {
+          // Use cached result
+          setProcessingStatus(language === 'en' ? 'Loading from cache...' : 'التحميل من ذاكرة التخزين المؤقت...');
+
+          const newResult: ExtractedResult = {
+            id: cachedResult.task_id,
+            fileName: cachedResult.file_name,
+            content: cachedResult.result_content,
+            extractedAt: new Date(cachedResult.created_at),
+            originalContent: originalContent,
+            fileType: file.type,
+            jobId: cachedResult.job_id,
+          };
+
+          setResults(prev => [newResult, ...prev]);
+
+          // Load the first result's content into preview
+          if (results.length === 0) {
+            setFilePreviewContent(originalContent);
+          }
+
+          setProcessingStatus(language === 'en' ? 'Loaded from cache!' : 'تم التحميل من ذاكرة التخزين المؤقت!');
+          toast.success(language === 'en' ? `Loaded cached result for ${file.name}` : `تم تحميل النتيجة المخزنة لـ ${file.name}`);
+
+          // Small delay before next file
+          await new Promise(resolve => setTimeout(resolve, 300));
+          continue;
+        }
+
+        // Cache miss - proceed with extraction
+        setProcessingStatus(language === 'en' ? 'Uploading...' : 'جاري الرفع...');
 
         // Upload file
         const uploadResponse = await uploadFile(file);
         const jobId = uploadResponse.job_id;
 
-        setProcessingStatus('Starting extraction...');
+        setProcessingStatus(language === 'en' ? 'Starting extraction...' : 'بدء الاستخراج...');
 
         // Start extraction task
         const extractionResponse = await startExtraction(
           jobId,
-          extractor.id || 'coordinates'
+          extractor.extractor_id
         );
 
-        setProcessingStatus('Processing document...');
+        setProcessingStatus(language === 'en' ? 'Processing document...' : 'معالجة المستند...');
 
         // Poll for completion
         const taskResult = await pollTaskStatus(extractionResponse.task_id);
@@ -147,14 +209,23 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
               setFilePreviewContent(originalContent);
             }
 
-            setProcessingStatus('Completed!');
+            // Cache the successful result
+            await setCachedResult(
+              file,
+              extractor.extractor_id,
+              extractor.updated_at,
+              extractedData,
+              taskResult.task_id
+            );
+
+            setProcessingStatus(language === 'en' ? 'Completed!' : 'مكتمل!');
           } else if (taskResult.result.status === 'failed') {
-            setProcessingStatus(`Failed: ${taskResult.result.error}`);
-            toast.error(`Extraction failed for ${file.name}: ${taskResult.result.error}`);
+            setProcessingStatus(language === 'en' ? `Failed: ${taskResult.result.error}` : `فشل: ${taskResult.result.error}`);
+            toast.error(language === 'en' ? `Extraction failed for ${file.name}: ${taskResult.result.error}` : `فشل الاستخراج لـ ${file.name}: ${taskResult.result.error}`);
           }
         } else if (taskResult.status === 'failure') {
-          setProcessingStatus(`Failed: ${taskResult.error || 'Unknown error'}`);
-          toast.error(`Extraction failed: ${taskResult.error || 'Unknown error'}`);
+          setProcessingStatus(language === 'en' ? `Failed: ${taskResult.error || 'Unknown error'}` : `فشل: ${taskResult.error || 'خطأ غير معروف'}`);
+          toast.error(language === 'en' ? `Extraction failed: ${taskResult.error || 'Unknown error'}` : `فشل الاستخراج: ${taskResult.error || 'خطأ غير معروف'}`);
         }
 
         // Small delay before next file
@@ -164,8 +235,8 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
       setUploadedFiles([]);
     } catch (error) {
       console.error('Extraction error:', error);
-      setProcessingStatus('Error occurred');
-      toast.error('Extraction failed. Please try again.');
+      setProcessingStatus(language === 'en' ? 'Error occurred' : 'حدث خطأ');
+      toast.error(language === 'en' ? 'Extraction failed. Please try again.' : 'فشل الاستخراج. يرجى المحاولة مرة أخرى.');
     } finally {
       setIsProcessing(false);
       setCurrentProcessingFile(null);
@@ -182,13 +253,137 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
             <IconComponent className="h-8 w-8 text-primary-foreground" />
           </div>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-foreground mb-2">{extractor.name}</h1>
-            {extractor.description && (
-              <p className="text-muted-foreground">{extractor.description}</p>
-            )}
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-foreground mb-2">{displayName}</h1>
+                {displayDescription && (
+                  <p className="text-muted-foreground mb-2">{displayDescription}</p>
+                )}
+                {/* Visibility Badges - Show visibility and ownership with colored badges */}
+                <div className="mt-2 flex gap-2">
+                  {/* Visibility badge with color styling */}
+                  {extractor.visibility === 'public' && (
+                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-200">
+                      {language === 'en' ? 'Public' : 'عام'}
+                    </span>
+                  )}
+                  {extractor.visibility === 'private' && (
+                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-900/30 border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-200">
+                      {language === 'en' ? 'Private' : 'خاص'}
+                    </span>
+                  )}
+                  {extractor.visibility === 'shared' && (
+                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 border border-purple-300 dark:border-purple-700 text-purple-800 dark:text-purple-200">
+                      {language === 'en' ? 'Shared' : 'مشترك'}
+                    </span>
+                  )}
+                  {/* Ownership badge */}
+                  {isOwner ? (
+                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200">
+                      {language === 'en' ? 'By me' : 'بواسطتي'}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-teal-100 dark:bg-teal-900/30 border border-teal-300 dark:border-teal-700 text-teal-800 dark:text-teal-200">
+                      {extractor.visibility === 'shared'
+                        ? (language === 'en' ? 'Shared with you' : 'مشترك معك')
+                        : (language === 'en' ? 'By others' : 'من الآخرين')
+                      }
+                    </span>
+                  )}
+                </div>
+                {!isOwner && (
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    <p className="font-medium">{language === 'en' ? 'Created by:' : 'أنشئ بواسطة:'} {ownerName}</p>
+                    {ownerDepartment && (
+                      <p>{language === 'en' ? 'Department:' : 'القسم:'} {ownerDepartment}</p>
+                    )}
+                    {ownerGM && (
+                      <p>{language === 'en' ? 'General Management:' : 'الإدارة العامة:'} {ownerGM}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                {isOwner && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsShareDialogOpen(true)}
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    {language === 'en' ? 'Share' : 'مشاركة'}
+                  </Button>
+                )}
+                {showHistory && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsHistoryDialogOpen(true)}
+                  >
+                    <History className="h-4 w-4 mr-2" />
+                    {language === 'en' ? 'History' : 'السجل'}
+                  </Button>
+                )}
+                {canRate && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsRateDialogOpen(true)}
+                  >
+                    <Star className="h-4 w-4 mr-2" />
+                    {language === 'en' ? 'Rate' : 'تقييم'}
+                  </Button>
+                )}
+                {extractor.visibility === 'public' && (
+                  <div className="flex items-center gap-1 px-3 py-1 bg-accent/50 rounded-md">
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    <span className="text-sm font-medium">
+                      {extractor.rating_avg ? extractor.rating_avg.toFixed(1) : 'N/A'}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      ({extractor.rating_count})
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Share Dialog */}
+      {isOwner && (
+        <ShareExtractorDialog
+          open={isShareDialogOpen}
+          onOpenChange={setIsShareDialogOpen}
+          extractorId={Number(extractor.id)}
+          extractorName={displayName}
+          currentVisibility={extractor.visibility}
+          onVisibilityChange={() => window.location.reload()}
+        />
+      )}
+
+      {/* Rate Dialog */}
+      {canRate && (
+        <RateExtractorDialog
+          open={isRateDialogOpen}
+          onOpenChange={setIsRateDialogOpen}
+          extractorId={Number(extractor.id)}
+          extractorName={displayName}
+        />
+      )}
+
+      {/* Version History Dialog */}
+      {showHistory && (
+        <VersionHistoryDialog
+          open={isHistoryDialogOpen}
+          onOpenChange={setIsHistoryDialogOpen}
+          extractorId={Number(extractor.id)}
+          extractorName={displayName}
+        />
+      )}
+
 
       {/* Content - Two Column Layout */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-8">
@@ -229,10 +424,10 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
                         <UploadCloud className="h-12 w-12 text-muted-foreground mb-4" />
                       )}
                       <p className="text-lg font-medium text-foreground mb-2">
-                        {isProcessing ? 'Processing...' : t('uploadDocuments')}
+                        {isProcessing ? (language === 'en' ? 'Processing...' : 'جاري المعالجة...') : t('uploadDocuments')}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {isProcessing ? 'Please wait until processing completes' : t('dragOrClick')}
+                        {isProcessing ? (language === 'en' ? 'Please wait until processing completes' : 'الرجاء الانتظار حتى تكتمل المعالجة') : t('dragOrClick')}
                       </p>
                     </div>
                   </label>
@@ -260,7 +455,10 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
                       className="w-full bg-gradient-primary hover:opacity-90 shadow-soft"
                     >
                       <Play className="h-4 w-4 mr-2" />
-                      Extract {uploadedFiles.length} {uploadedFiles.length === 1 ? 'File' : 'Files'}
+                      {language === 'en'
+                        ? `Extract ${uploadedFiles.length} ${uploadedFiles.length === 1 ? 'File' : 'Files'}`
+                        : `استخراج ${uploadedFiles.length} ${uploadedFiles.length === 1 ? 'ملف' : 'ملفات'}`
+                      }
                     </Button>
                   </div>
                 )}
@@ -371,6 +569,18 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
                   </Card>
                 </div>
               ))}
+
+              {/* Try Another File Button */}
+              <div className="mt-8 flex justify-center">
+                <Button
+                  size="lg"
+                  onClick={() => setResults([])}
+                  className="gap-2"
+                >
+                  <UploadCloud className="h-5 w-5" />
+                  {language === 'en' ? 'Extract Another Document' : 'استخراج مستند آخر'}
+                </Button>
+              </div>
             </div>
           )}
         </div>

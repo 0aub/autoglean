@@ -5,7 +5,7 @@ import uuid
 from pathlib import Path
 from typing import List
 
-from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
+from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from celery.result import AsyncResult
@@ -25,6 +25,13 @@ from autoglean.api.models import (
     HealthResponse,
     UpdateExtractorRequest
 )
+from autoglean.auth.routes import router as auth_router
+from autoglean.extractors.routes import router as extractors_router
+from autoglean.jobs.routes import router as jobs_router
+from autoglean.leaderboard.routes import router as leaderboard_router
+from autoglean.auth.dependencies import get_current_active_user
+from autoglean.db.base import get_db
+from autoglean.jobs.service import create_extraction_job
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -54,6 +61,12 @@ app.add_middleware(
 
 # Get storage manager
 storage_manager = get_storage_manager()
+
+# Include routers
+app.include_router(auth_router)
+app.include_router(extractors_router)
+app.include_router(jobs_router)
+app.include_router(leaderboard_router)
 
 
 # === Health Check ===
@@ -169,28 +182,53 @@ async def upload_file(file: UploadFile = File(...)):
 # === Extraction Endpoints ===
 
 @app.post("/api/extract", response_model=ExtractionResponse)
-async def extract_document(request: ExtractionRequest):
+async def extract_document(
+    request: ExtractionRequest,
+    current_user = Depends(get_current_active_user),
+    db = Depends(get_db)
+):
     """
     Start document extraction task.
 
     Returns task_id to track extraction progress.
     """
     try:
+        # Import here to avoid circular dependency
+        from autoglean.db.models import Extractor
+
         # Get file path
         files = storage_manager.list_job_documents(request.job_id)
         if not files:
             raise HTTPException(status_code=404, detail="No files found for job_id")
 
         file_path = str(files[0])  # Use first file
+        file_name = files[0].name
 
-        # Start Celery task
+        # Look up extractor database ID from extractor_id (UUID)
+        extractor = db.query(Extractor).filter(Extractor.extractor_id == request.extractor_id).first()
+        if not extractor:
+            raise HTTPException(status_code=404, detail=f"Extractor with ID '{request.extractor_id}' not found")
+
+        extractor_db_id = extractor.id
+
+        # Create extraction job record (using database integer ID)
+        create_extraction_job(
+            db=db,
+            job_id=request.job_id,
+            user_id=current_user.id,
+            extractor_id=extractor_db_id,
+            file_name=file_name,
+            file_path=file_path
+        )
+
+        # Start Celery task (using UUID string)
         task = tasks.extract_document_task.delay(
             job_id=request.job_id,
             extractor_id=request.extractor_id,
             file_path=file_path
         )
 
-        logger.info(f"Extraction task started: {task.id}, Job: {request.job_id}")
+        logger.info(f"Extraction task started: {task.id}, Job: {request.job_id}, User: {current_user.email}")
 
         return ExtractionResponse(
             task_id=task.id,
@@ -203,6 +241,7 @@ async def extract_document(request: ExtractionRequest):
         raise
     except Exception as e:
         logger.error(f"Extraction request failed: {str(e)}")
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -331,6 +370,74 @@ async def serve_file(job_id: str, filename: str):
         raise
     except Exception as e:
         logger.error(f"Failed to serve file: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# === Departments and GM Endpoints ===
+
+@app.get("/api/departments")
+async def get_departments(
+    current_user = Depends(get_current_active_user),
+    db = Depends(get_db)
+):
+    """Get unique departments from public extractors."""
+    try:
+        from autoglean.db.models import Department, Extractor, User, VisibilityEnum
+
+        # Get distinct departments from users who own public extractors
+        departments = db.query(
+            Department.name_en,
+            Department.name_ar
+        ).join(
+            User, User.department_id == Department.id
+        ).join(
+            Extractor, Extractor.owner_id == User.id
+        ).filter(
+            Extractor.visibility == VisibilityEnum.PUBLIC,
+            Extractor.deleted_at == None
+        ).distinct().all()
+
+        return [
+            {"name_en": dept.name_en, "name_ar": dept.name_ar}
+            for dept in departments
+        ]
+
+    except Exception as e:
+        logger.error(f"Failed to get departments: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/general-managements")
+async def get_general_managements(
+    current_user = Depends(get_current_active_user),
+    db = Depends(get_db)
+):
+    """Get unique general managements from public extractors."""
+    try:
+        from autoglean.db.models import GeneralManagement, Department, Extractor, User, VisibilityEnum
+
+        # Get distinct GMs from users who own public extractors
+        gms = db.query(
+            GeneralManagement.name_en,
+            GeneralManagement.name_ar
+        ).join(
+            Department, Department.gm_id == GeneralManagement.id
+        ).join(
+            User, User.department_id == Department.id
+        ).join(
+            Extractor, Extractor.owner_id == User.id
+        ).filter(
+            Extractor.visibility == VisibilityEnum.PUBLIC,
+            Extractor.deleted_at == None
+        ).distinct().all()
+
+        return [
+            {"name_en": gm.name_en, "name_ar": gm.name_ar}
+            for gm in gms
+        ]
+
+    except Exception as e:
+        logger.error(f"Failed to get general managements: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

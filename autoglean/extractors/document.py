@@ -35,13 +35,40 @@ class DocumentExtractor:
 
     def get_extractor_config(self, extractor_id: str) -> Dict[str, Any]:
         """Get configuration for a specific extractor."""
+        # First try to load from YAML config
         extractors_config = self.config_loader.load_extractors_config()
         extractors = extractors_config.get('extractors', {})
 
-        if extractor_id not in extractors:
-            raise ValueError(f"Extractor '{extractor_id}' not found in configuration")
+        if extractor_id in extractors:
+            return extractors[extractor_id]
 
-        return extractors[extractor_id]
+        # If not in YAML, try to load from database
+        try:
+            from autoglean.db.base import SessionLocal
+            from autoglean.db.models import Extractor
+
+            db = SessionLocal()
+            try:
+                extractor = db.query(Extractor).filter(Extractor.extractor_id == extractor_id).first()
+                if extractor:
+                    # Convert database extractor to config format
+                    return {
+                        'id': extractor.extractor_id,
+                        'name': extractor.name_en,  # Use English name as default
+                        'icon': extractor.icon,
+                        'description': extractor.description_en,
+                        'prompt': extractor.prompt,
+                        'llm': extractor.llm,
+                        'temperature': extractor.temperature,
+                        'max_tokens': extractor.max_tokens,
+                        'output_format': extractor.output_format
+                    }
+            finally:
+                db.close()
+        except Exception as e:
+            logger.warning(f"Failed to load extractor from database: {e}")
+
+        raise ValueError(f"Extractor '{extractor_id}' not found in configuration")
 
     def list_extractors(self) -> Dict[str, Dict[str, Any]]:
         """List all available extractors."""

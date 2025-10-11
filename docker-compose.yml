@@ -22,7 +22,10 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - LLM_MOCK_MODE=${LLM_MOCK_MODE}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-autoglean}:${POSTGRES_PASSWORD:-autoglean_dev_password}@postgres:5432/${POSTGRES_DB:-autoglean}
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -49,9 +52,34 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - LLM_MOCK_MODE=${LLM_MOCK_MODE}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-autoglean}:${POSTGRES_PASSWORD:-autoglean_dev_password}@postgres:5432/${POSTGRES_DB:-autoglean}
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - autoglean-network
+
+  # PostgreSQL Database
+  postgres:
+    build:
+      context: .
+      dockerfile: docker/postgres/Dockerfile.postgres
+    container_name: autoglean-postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-autoglean}
+      - POSTGRES_USER=${POSTGRES_USER:-autoglean}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-autoglean_dev_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-autoglean}"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
     networks:
       - autoglean-network
 
@@ -91,6 +119,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  postgres_data:
   redis_data:
 
 networks:

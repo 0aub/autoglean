@@ -86,21 +86,43 @@ export default {
           to: { height: "0" },
         },
         "wave": {
-          "0%, 100%": { 
-            transform: "scale(1) translateY(0) translateX(0)",
+          "0%, 100%": {
+            transform: "scale(1)",
             opacity: "0.3"
           },
-          "25%": { 
-            transform: "scale(1.1) translateY(-12px) translateX(8px)",
+          "25%": {
+            transform: "scale(1.1)",
             opacity: "0.5"
           },
-          "50%": { 
-            transform: "scale(1.15) translateY(-8px) translateX(12px)",
+          "50%": {
+            transform: "scale(1.15)",
             opacity: "0.6"
           },
-          "75%": { 
-            transform: "scale(1.05) translateY(-18px) translateX(8px)",
+          "75%": {
+            transform: "scale(1.05)",
             opacity: "0.4"
+          },
+        },
+        "wave-rotate": {
+          "0%": {
+            transform: "scale(1) rotate(0deg)",
+            opacity: "0.3"
+          },
+          "25%": {
+            transform: "scale(1.1) rotate(90deg)",
+            opacity: "0.5"
+          },
+          "50%": {
+            transform: "scale(1.15) rotate(180deg)",
+            opacity: "0.6"
+          },
+          "75%": {
+            transform: "scale(1.05) rotate(270deg)",
+            opacity: "0.4"
+          },
+          "100%": {
+            transform: "scale(1) rotate(360deg)",
+            opacity: "0.3"
           },
         },
         "float": {
@@ -108,17 +130,17 @@ export default {
           "50%": { transform: "translateY(-20px)" },
         },
         "logo-float": {
-          "0%, 100%": { 
-            transform: "translateY(0px) scale(1) rotate(0deg)",
+          "0%, 100%": {
+            transform: "scale(1) rotate(0deg)",
           },
-          "25%": { 
-            transform: "translateY(-15px) scale(1.05) rotate(2deg)",
+          "25%": {
+            transform: "scale(1.05) rotate(2deg)",
           },
-          "50%": { 
-            transform: "translateY(-25px) scale(1.08) rotate(0deg)",
+          "50%": {
+            transform: "scale(1.08) rotate(0deg)",
           },
-          "75%": { 
-            transform: "translateY(-15px) scale(1.05) rotate(-2deg)",
+          "75%": {
+            transform: "scale(1.05) rotate(-2deg)",
           },
         },
         "logo-pulse": {
@@ -135,16 +157,22 @@ export default {
           "0%": { opacity: "0", transform: "translateY(10px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        "rotate-slow": {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "wave": "wave 6s ease-in-out infinite",
+        "wave-rotate": "wave-rotate 20s linear infinite",
         "wave-delayed": "wave 6s ease-in-out 2s infinite",
         "float": "float 6s ease-in-out infinite",
         "logo-float": "logo-float 5s ease-in-out infinite",
         "logo-pulse": "logo-pulse 3s ease-in-out infinite",
         "fade-in": "fade-in 0.6s ease-out",
+        "rotate-slow": "rotate-slow 20s linear infinite",
       },
     },
   },

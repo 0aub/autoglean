@@ -12,7 +12,7 @@ interface LanguageContextType {
 
 const translations = {
   en: {
-    appName: 'DocuMind',
+    appName: 'AutoGlean',
     welcome: 'Welcome',
     recipes: 'Extractors',
     newExtractor: 'New Extractor',
@@ -51,7 +51,7 @@ const translations = {
     delete: 'Delete',
   },
   ar: {
-    appName: 'دوكيومايند',
+    appName: 'الاستخراج الذكي',
     welcome: 'مرحباً',
     recipes: 'المستخرجات',
     newExtractor: 'مستخرج جديد',
@@ -94,12 +94,18 @@ const translations = {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>(() => {
+    // Load from localStorage on mount
+    const savedLanguage = localStorage.getItem('language') as Language | null;
+    return savedLanguage || 'en';
+  });
   const direction: Direction = language === 'ar' ? 'rtl' : 'ltr';
 
   useEffect(() => {
     document.documentElement.dir = direction;
     document.documentElement.lang = language;
+    // Save to localStorage whenever language changes
+    localStorage.setItem('language', language);
   }, [direction, language]);
 
   const toggleLanguage = () => {

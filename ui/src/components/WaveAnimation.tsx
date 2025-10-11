@@ -1,26 +1,48 @@
 import { Layers } from "lucide-react";
+import { LOGO_PATH, LOGO_SIZE, ANIMATION } from "@/lib/constants";
 
 export const WaveAnimation = () => {
+  const { waveSquares, logoOpacity } = ANIMATION;
+
   return (
-    <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-      {/* Animated Wave Circles */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        {[...Array(5)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full border-2 border-primary/20 animate-wave"
-            style={{
-              width: `${120 + i * 70}px`,
-              height: `${120 + i * 70}px`,
-              animationDelay: `${i * 0.4}s`,
-            }}
-          />
-        ))}
+    <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
+      {/* Logo in Center - render first so it's behind squares */}
+      <div className="absolute inset-0 flex items-center justify-center z-0">
+        <img
+          src={LOGO_PATH}
+          alt="AutoGlean Logo"
+          style={{
+            width: LOGO_SIZE.animation,
+            height: LOGO_SIZE.animation,
+            maxWidth: 'none',
+            opacity: logoOpacity
+          }}
+        />
       </div>
-      
-      {/* Central Icon - minimal outline with enhanced animations */}
-      <div className="relative z-10 flex items-center justify-center animate-logo-float">
-        <Layers className="h-16 w-16 text-primary animate-logo-pulse" />
+
+      {/* Animated Wave Squares */}
+      <div className="absolute inset-0 flex items-center justify-center z-10">
+        <div className="relative">
+          {[...Array(waveSquares.count)].map((_, i) => {
+            const size = waveSquares.baseSize + i * waveSquares.increment;
+            return (
+              <div
+                key={i}
+                className="absolute border-2 border-primary/20 animate-wave-rotate"
+                style={{
+                  width: `${size}px`,
+                  height: `${size}px`,
+                  animationDelay: `${i * waveSquares.baseDelay}s`,
+                  animationDuration: `${waveSquares.baseDuration + i * waveSquares.durationIncrement}s`,
+                  left: '50%',
+                  top: '50%',
+                  marginLeft: `${-size / 2}px`,
+                  marginTop: `${-size / 2}px`,
+                }}
+              />
+            );
+          })}
+        </div>
       </div>
 
       {/* Floating Gradient Orbs */}
