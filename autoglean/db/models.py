@@ -220,11 +220,13 @@ class ExtractionJob(Base):
     result_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     result_path: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_cached_result: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # True if result was reused from cache
 
     # LLM Usage
     prompt_tokens: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     completion_tokens: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     total_tokens: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    cached_tokens: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Cached prompt tokens
     model_used: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
 
     # Timing

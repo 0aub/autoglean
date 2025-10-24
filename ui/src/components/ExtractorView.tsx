@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { UploadCloud, Play, File, Zap, Map, Calendar, Home, Search, Circle, LucideIcon, Copy, FileText, Loader2, Lock, Share2, Star, History } from "lucide-react";
+import { UploadCloud, Play, File, Zap, Map, Calendar, Home, Search, Circle, LucideIcon, Copy, FileText, Loader2, Lock, Share2, Star, History, CheckCircle, Clock, Folder, Database, Settings, Users, BarChart, Layers, Package, Globe, Book, Briefcase, ClipboardList, Mail, Phone, MapPin, Tag, Archive, ThumbsUp, TrendingUp, Activity, Award, Target, Flag, CheckSquare, Filter, Compass, Navigation, Bell, Bookmark, Box, Camera, Cast, ChevronRight, Cloud, Code, Coffee, CreditCard, DollarSign, Download, Droplet, Edit, Eye, Facebook, FileCheck, Film, Flame, Gift, Headphones, Image, Instagram, Key, Link, MessageCircle, Mic, Monitor, Moon, Music, PenTool, Percent, Printer, Radio, Repeat, Save, Send, Server, Shield, ShoppingBag, ShoppingCart, Shuffle, Smartphone, Speaker, Sun, Thermometer, Trash, Truck, Tv, Twitter, Umbrella, Upload, User, Video, Wifi, Wind, Youtube, Anchor, Atom, Battery, Bluetooth, Calculator, ChevronDown, Clipboard, CloudRain, Cpu, Disc, Feather, FileVideo, Fingerprint, Flashlight, FolderOpen, Gamepad2, HardDrive, Hash, Headset, HelpCircle, Laptop, Lightbulb, Medal, Menu, MessageSquare, Paperclip, PieChart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Extractor, ExtractedResult } from "@/types/extractor";
 import { uploadFile, startExtraction, pollTaskStatus } from "@/services/api";
@@ -17,12 +17,7 @@ import { getCachedResult, setCachedResult } from "@/lib/cache";
 
 // Icon mapping for lucide icons
 const iconMap: Record<string, LucideIcon> = {
-  Map,
-  Calendar,
-  Home,
-  File,
-  Search,
-  Circle,
+  Map, Calendar, Home, File, Search, Circle, FileText, Folder, Database, Settings, Users, BarChart, Zap, Layers, Package, Globe, Book, Briefcase, ClipboardList, Mail, Phone, MapPin, Clock, Tag, Archive, Star, Heart: Star, ThumbsUp, TrendingUp, Activity, Award, Target, Flag, CheckSquare, Filter, Share2, Compass, Navigation, Bell, Bookmark, Box, Camera, Cast, ChevronRight, Cloud, Code, Coffee, Copy, CreditCard, DollarSign, Download, Droplet, Edit, Eye, Facebook, FileCheck, Film, Flame, Gift, Headphones, Image, Instagram, Key, Link, Lock, MessageCircle, Mic, Monitor, Moon, Music, PenTool, Percent, Play, Printer, Radio, Repeat, Save, Send, Server, Shield, ShoppingBag, ShoppingCart, Shuffle, Smartphone, Speaker, Sun, Thermometer, Trash, Truck, Tv, Twitter, Umbrella, Upload, User, Video, Wifi, Wind, Youtube, Anchor, Atom, Battery, Bluetooth, Calculator, CheckCircle, ChevronDown, Clipboard, CloudRain, Cpu, Disc, Feather, FileVideo, Fingerprint, Flashlight, FolderOpen, Gamepad2, HardDrive, Hash, Headset, HelpCircle, Laptop, Lightbulb, Medal, Menu, MessageSquare, Paperclip, PieChart,
 };
 
 interface ExtractorViewProps {
@@ -37,6 +32,7 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentProcessingFile, setCurrentProcessingFile] = useState<string | null>(null);
   const [processingStatus, setProcessingStatus] = useState<string>('');
+  const [fileProgressMap, setFileProgressMap] = useState<Record<string, { status: string, isProcessing: boolean, isComplete: boolean }>>({});
   const [selectedResultIndex, setSelectedResultIndex] = useState<number>(0);
   const [filePreviewContent, setFilePreviewContent] = useState<string>('');
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
@@ -70,16 +66,21 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
   const copyAsText = (content: string) => {
     // Remove markdown formatting
     const text = content
-      .replace(/#{1,6}\s/g, '') // Remove headers
-      .replace(/\*\*/g, '') // Remove bold
-      .replace(/\*/g, '') // Remove italic
+      .replace(/```[\s\S]*?```/g, '') // Remove code blocks (triple backticks)
+      .replace(/`[^`]+`/g, '') // Remove inline code
+      .replace(/#{1,6}\s+/g, '') // Remove headers
+      .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold, keep text
+      .replace(/\*([^*]+)\*/g, '$1') // Remove italic, keep text
+      .replace(/_([^_]+)_/g, '$1') // Remove italic underscore, keep text
       .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Remove links, keep text
-      .replace(/`{1,3}[^`]*`{1,3}/g, '') // Remove code blocks
-      .replace(/^\s*[-*+]\s/gm, '') // Remove list markers
-      .replace(/^\s*\d+\.\s/gm, ''); // Remove numbered lists
+      .replace(/^\s*[-*+]\s+/gm, '') // Remove list markers
+      .replace(/^\s*\d+\.\s+/gm, '') // Remove numbered lists
+      .replace(/^\s*>\s+/gm, '') // Remove blockquotes
+      .replace(/---+/g, '') // Remove horizontal rules
+      .replace(/\n{3,}/g, '\n\n'); // Normalize multiple newlines
 
-    navigator.clipboard.writeText(text);
-    toast.success('Copied as text!');
+    navigator.clipboard.writeText(text.trim());
+    toast.success(language === 'en' ? 'Copied as text!' : 'تم النسخ كنص!');
   };
 
   const copyAsMarkdown = (content: string) => {
@@ -122,10 +123,25 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
   const handleExtract = async () => {
     setIsProcessing(true);
 
+    // Initialize progress for all files
+    const initialProgress: Record<string, { status: string, isProcessing: boolean, isComplete: boolean }> = {};
+    uploadedFiles.forEach(file => {
+      initialProgress[file.name] = {
+        status: language === 'en' ? 'Waiting...' : 'في الانتظار...',
+        isProcessing: false,
+        isComplete: false
+      };
+    });
+    setFileProgressMap(initialProgress);
+
     try {
       // Process each uploaded file
       for (const file of uploadedFiles) {
         setCurrentProcessingFile(file.name);
+        setFileProgressMap(prev => ({
+          ...prev,
+          [file.name]: { status: language === 'en' ? 'Checking cache...' : 'فحص ذاكرة التخزين المؤقت...', isProcessing: true, isComplete: false }
+        }));
         setProcessingStatus(language === 'en' ? 'Checking cache...' : 'فحص ذاكرة التخزين المؤقت...');
 
         // Read the original file content for preview
@@ -139,17 +155,35 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
         );
 
         if (cachedResult) {
-          // Use cached result
-          setProcessingStatus(language === 'en' ? 'Loading from cache...' : 'التحميل من ذاكرة التخزين المؤقت...');
+          // Use cached result BUT still create job record for activity tracking
+          setFileProgressMap(prev => ({
+            ...prev,
+            [file.name]: { status: language === 'en' ? 'Using cached result...' : 'استخدام النتيجة المخزنة...', isProcessing: true, isComplete: false }
+          }));
+          setProcessingStatus(language === 'en' ? 'Using cached result...' : 'استخدام النتيجة المخزنة...');
 
+          // Upload file and create extraction job to track activity
+          const uploadResponse = await uploadFile(file);
+          const jobId = uploadResponse.job_id;
+
+          // Start extraction (backend will use cache and create job record)
+          const extractionResponse = await startExtraction(
+            jobId,
+            extractor.extractor_id
+          );
+
+          // Poll for completion (should be instant since backend uses cache)
+          await pollTaskStatus(extractionResponse.task_id);
+
+          // Display the cached result immediately
           const newResult: ExtractedResult = {
-            id: cachedResult.task_id,
-            fileName: cachedResult.file_name,
+            id: extractionResponse.task_id,
+            fileName: file.name,
             content: cachedResult.result_content,
-            extractedAt: new Date(cachedResult.created_at),
+            extractedAt: new Date(),
             originalContent: originalContent,
             fileType: file.type,
-            jobId: cachedResult.job_id,
+            jobId: jobId,
           };
 
           setResults(prev => [newResult, ...prev]);
@@ -159,7 +193,11 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
             setFilePreviewContent(originalContent);
           }
 
-          setProcessingStatus(language === 'en' ? 'Loaded from cache!' : 'تم التحميل من ذاكرة التخزين المؤقت!');
+          setFileProgressMap(prev => ({
+            ...prev,
+            [file.name]: { status: language === 'en' ? '✓ Completed (cached)' : '✓ مكتمل (مخزن)', isProcessing: false, isComplete: true }
+          }));
+          setProcessingStatus(language === 'en' ? 'Completed (cached)!' : 'مكتمل (مخزن)!');
           toast.success(language === 'en' ? `Loaded cached result for ${file.name}` : `تم تحميل النتيجة المخزنة لـ ${file.name}`);
 
           // Small delay before next file
@@ -168,12 +206,20 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
         }
 
         // Cache miss - proceed with extraction
+        setFileProgressMap(prev => ({
+          ...prev,
+          [file.name]: { status: language === 'en' ? 'Uploading...' : 'جاري الرفع...', isProcessing: true, isComplete: false }
+        }));
         setProcessingStatus(language === 'en' ? 'Uploading...' : 'جاري الرفع...');
 
         // Upload file
         const uploadResponse = await uploadFile(file);
         const jobId = uploadResponse.job_id;
 
+        setFileProgressMap(prev => ({
+          ...prev,
+          [file.name]: { status: language === 'en' ? 'Starting extraction...' : 'بدء الاستخراج...', isProcessing: true, isComplete: false }
+        }));
         setProcessingStatus(language === 'en' ? 'Starting extraction...' : 'بدء الاستخراج...');
 
         // Start extraction task
@@ -182,6 +228,10 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
           extractor.extractor_id
         );
 
+        setFileProgressMap(prev => ({
+          ...prev,
+          [file.name]: { status: language === 'en' ? 'Processing document...' : 'معالجة المستند...', isProcessing: true, isComplete: false }
+        }));
         setProcessingStatus(language === 'en' ? 'Processing document...' : 'معالجة المستند...');
 
         // Poll for completion
@@ -218,12 +268,24 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
               taskResult.task_id
             );
 
+            setFileProgressMap(prev => ({
+              ...prev,
+              [file.name]: { status: language === 'en' ? '✓ Completed' : '✓ مكتمل', isProcessing: false, isComplete: true }
+            }));
             setProcessingStatus(language === 'en' ? 'Completed!' : 'مكتمل!');
           } else if (taskResult.result.status === 'failed') {
+            setFileProgressMap(prev => ({
+              ...prev,
+              [file.name]: { status: language === 'en' ? `✗ Failed: ${taskResult.result.error}` : `✗ فشل: ${taskResult.result.error}`, isProcessing: false, isComplete: false }
+            }));
             setProcessingStatus(language === 'en' ? `Failed: ${taskResult.result.error}` : `فشل: ${taskResult.result.error}`);
             toast.error(language === 'en' ? `Extraction failed for ${file.name}: ${taskResult.result.error}` : `فشل الاستخراج لـ ${file.name}: ${taskResult.result.error}`);
           }
         } else if (taskResult.status === 'failure') {
+          setFileProgressMap(prev => ({
+            ...prev,
+            [file.name]: { status: language === 'en' ? `✗ Failed: ${taskResult.error || 'Unknown error'}` : `✗ فشل: ${taskResult.error || 'خطأ غير معروف'}`, isProcessing: false, isComplete: false }
+          }));
           setProcessingStatus(language === 'en' ? `Failed: ${taskResult.error || 'Unknown error'}` : `فشل: ${taskResult.error || 'خطأ غير معروف'}`);
           toast.error(language === 'en' ? `Extraction failed: ${taskResult.error || 'Unknown error'}` : `فشل الاستخراج: ${taskResult.error || 'خطأ غير معروف'}`);
         }
@@ -241,6 +303,8 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
       setIsProcessing(false);
       setCurrentProcessingFile(null);
       setProcessingStatus('');
+      // Clear progress map after a delay so user can see final status
+      setTimeout(() => setFileProgressMap({}), 2000);
     }
   };
 
@@ -388,7 +452,7 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
       {/* Content - Two Column Layout */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-8">
         <div className="max-w-7xl mx-auto">
-          {results.length === 0 ? (
+          {(results.length === 0 || isProcessing) ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Upload Section */}
               <div className="flex flex-col">
@@ -433,16 +497,41 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
                   </label>
                 </Card>
 
-                {/* Processing Status - Show inline in upload area when processing */}
-                {isProcessing && currentProcessingFile && (
-                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-blue-900 dark:text-blue-100">{currentProcessingFile}</p>
-                        <p className="text-xs text-blue-700 dark:text-blue-300">{processingStatus}</p>
+                {/* Processing Status - Show list of all files with individual progress */}
+                {Object.keys(fileProgressMap).length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {Object.entries(fileProgressMap).map(([fileName, progress]) => (
+                      <div
+                        key={fileName}
+                        className={`p-3 rounded-lg border ${
+                          progress.isComplete
+                            ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+                            : progress.isProcessing
+                            ? 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800'
+                            : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-800'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {progress.isProcessing ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                          ) : progress.isComplete ? (
+                            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                          ) : (
+                            <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate text-foreground">{fileName}</p>
+                            <p className={`text-xs ${
+                              progress.isComplete
+                                ? 'text-green-700 dark:text-green-300'
+                                : progress.isProcessing
+                                ? 'text-blue-700 dark:text-blue-300'
+                                : 'text-gray-600 dark:text-gray-400'
+                            }`}>{progress.status}</p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
                 )}
 
@@ -464,18 +553,43 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
                 )}
               </>
               </div>
-              {/* Results Section - Empty State */}
+              {/* Results Section - Show completed results or empty state */}
               <div className="flex flex-col">
                 <h2 className="text-xl font-semibold text-foreground flex items-center gap-2 mb-6">
                   <Zap className="h-5 w-5 text-muted-foreground" />
                   {t('results')}
+                  {isProcessing && results.length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      ({results.length} {language === 'en' ? 'completed' : 'مكتمل'})
+                    </span>
+                  )}
                 </h2>
-                <Card className="h-96 flex items-center justify-center">
-                  <div className="text-center">
-                    <Zap className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">{t('noResults')}</p>
+                {results.length === 0 ? (
+                  <Card className="h-96 flex items-center justify-center">
+                    <div className="text-center">
+                      <Zap className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">{t('noResults')}</p>
+                    </div>
+                  </Card>
+                ) : (
+                  <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                    {results.map((result) => (
+                      <Card key={result.id} className="overflow-hidden">
+                        <div className="p-4 border-b border-border bg-accent/30">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <h3 className="font-semibold text-sm text-foreground">{result.fileName}</h3>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <div className="text-sm text-muted-foreground line-clamp-3">
+                            {result.content.substring(0, 150)}...
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
                   </div>
-                </Card>
+                )}
               </div>
             </div>
           ) : (

@@ -151,12 +151,19 @@ class LLMClient:
                 logger.info(f"Content length: {len(str(response.choices[0].message.content)) if response.choices[0].message.content else 0}")
                 logger.info(f"=== END RAW RESPONSE ===")
 
+                # Extract cached tokens if available
+                cached_tokens = None
+                if hasattr(response.usage, 'prompt_tokens_details') and response.usage.prompt_tokens_details:
+                    if hasattr(response.usage.prompt_tokens_details, 'cached_tokens'):
+                        cached_tokens = response.usage.prompt_tokens_details.cached_tokens
+
                 result = {
                     'content': response.choices[0].message.content,
                     'usage': {
                         'prompt_tokens': response.usage.prompt_tokens,
                         'completion_tokens': response.usage.completion_tokens,
-                        'total_tokens': response.usage.total_tokens
+                        'total_tokens': response.usage.total_tokens,
+                        'cached_tokens': cached_tokens
                     },
                     'model': model_name,
                     'provider': provider

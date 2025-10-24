@@ -19,6 +19,13 @@ class ExtractionJobResponse(BaseModel):
     error_message: Optional[str]
     created_at: datetime
     completed_at: Optional[datetime]
+    # Token usage
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
+    cached_tokens: Optional[int] = None
+    model_used: Optional[str] = None
+    is_cached_result: bool = False
 
     class Config:
         from_attributes = True

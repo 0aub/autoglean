@@ -2,12 +2,42 @@
 
 import logging
 from pathlib import Path
+from datetime import datetime
 
 from autoglean.api.celery_app import celery_app
 from autoglean.extractors.document import get_document_extractor
 from autoglean.core.storage import get_storage_manager
+from autoglean.db.base import get_db
+from autoglean.db.models import ExtractionJob, ExtractorUsageStats
 
 logger = logging.getLogger(__name__)
+
+
+def _update_usage_stats(db, extractor_id: int, success: bool = True):
+    """Update extractor usage statistics."""
+    stats = db.query(ExtractorUsageStats).filter(
+        ExtractorUsageStats.extractor_id == extractor_id
+    ).first()
+
+    if stats:
+        stats.total_uses += 1
+        if success:
+            stats.successful_uses += 1
+        else:
+            stats.failed_uses += 1
+        stats.last_used_at = datetime.utcnow()
+        stats.updated_at = datetime.utcnow()
+    else:
+        stats = ExtractorUsageStats(
+            extractor_id=extractor_id,
+            total_uses=1,
+            successful_uses=1 if success else 0,
+            failed_uses=0 if success else 1,
+            last_used_at=datetime.utcnow()
+        )
+        db.add(stats)
+
+    db.commit()
 
 
 @celery_app.task(bind=True, name='autoglean.extract_document')
@@ -28,9 +58,18 @@ def extract_document_task(
     Returns:
         Extraction result dictionary
     """
+    db = next(get_db())
+
     try:
         logger.info(f"Starting extraction job: {job_id}")
         logger.info(f"Extractor: {extractor_id}, File: {file_path}")
+
+        # Update database: mark as processing
+        job = db.query(ExtractionJob).filter(ExtractionJob.job_id == job_id).first()
+        if job:
+            job.status = "processing"
+            job.started_at = datetime.utcnow()
+            db.commit()
 
         # Update task state
         self.update_state(
@@ -38,15 +77,75 @@ def extract_document_task(
             meta={'status': 'Processing document...'}
         )
 
-        # Get extractor and process document
-        extractor = get_document_extractor()
-        result = extractor.extract(
-            extractor_id=extractor_id,
-            file_path=file_path,
-            job_id=job_id
-        )
+        # Check for cached result from a previous successful extraction
+        # Look for a previous job with same file_name and extractor_id that succeeded
+        from pathlib import Path
+        file_name = Path(file_path).name
 
-        logger.info(f"Extraction completed for job: {job_id}")
+        cached_job = db.query(ExtractionJob).filter(
+            ExtractionJob.file_name == file_name,
+            ExtractionJob.extractor_id == job.extractor_id,
+            ExtractionJob.status.in_(["success", "completed"]),  # Support both statuses
+            ExtractionJob.result_content != None,
+            ExtractionJob.id != job.id  # Don't match itself
+        ).order_by(
+            ExtractionJob.completed_at.desc()
+        ).first()
+
+        is_cached = False
+        if cached_job:
+            # Reuse the cached result
+            logger.info(f"Using cached result from job {cached_job.job_id}")
+            result = {
+                'job_id': job_id,
+                'extractor_id': extractor_id,
+                'file_name': file_name,
+                'result_content': cached_job.result_content,
+                'result_path': cached_job.result_path,
+                'usage': {
+                    'prompt_tokens': 0,
+                    'completion_tokens': 0,
+                    'total_tokens': 0,
+                    'cached_tokens': 0
+                },
+                'model': cached_job.model_used or 'cached'
+            }
+            is_cached = True
+        else:
+            # Get extractor and process document
+            extractor = get_document_extractor()
+            result = extractor.extract(
+                extractor_id=extractor_id,
+                file_path=file_path,
+                job_id=job_id
+            )
+
+        logger.info(f"Extraction completed for job: {job_id} (cached: {is_cached})")
+
+        # Update database: mark as completed
+        if job:
+            job.status = "completed"  # Use "completed" to match existing jobs
+            job.result_content = result.get('result_content', '')
+            job.result_path = result.get('result_path', '')
+            job.completed_at = datetime.utcnow()
+            job.is_cached_result = is_cached  # Mark if result was from cache
+
+            # Update token usage if available
+            if 'usage' in result:
+                usage = result['usage']
+                job.prompt_tokens = usage.get('prompt_tokens')
+                job.completion_tokens = usage.get('completion_tokens')
+                job.total_tokens = usage.get('total_tokens')
+                job.cached_tokens = usage.get('cached_tokens')  # Save cached tokens
+
+            if 'model' in result:
+                job.model_used = result['model']
+
+            db.commit()
+
+            # Update usage stats (only for non-cached results)
+            if not is_cached:
+                _update_usage_stats(db, job.extractor_id)
 
         return {
             'status': 'completed',
@@ -56,6 +155,18 @@ def extract_document_task(
 
     except Exception as e:
         logger.error(f"Extraction failed for job {job_id}: {str(e)}", exc_info=True)
+
+        # Update database: mark as failed
+        job = db.query(ExtractionJob).filter(ExtractionJob.job_id == job_id).first()
+        if job:
+            job.status = "failed"  # Use "failed" to match existing jobs
+            job.error_message = str(e)
+            job.completed_at = datetime.utcnow()
+            db.commit()
+
+            # Update usage stats (count failures too)
+            _update_usage_stats(db, job.extractor_id, success=False)
+
         # Return error as a dict instead of raising to avoid Celery serialization issues
         return {
             'status': 'failed',
@@ -63,6 +174,8 @@ def extract_document_task(
             'error': str(e),
             'error_type': type(e).__name__
         }
+    finally:
+        db.close()
 
 
 @celery_app.task(name='docinfo.extract_batch')

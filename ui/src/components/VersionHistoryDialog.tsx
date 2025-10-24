@@ -74,12 +74,34 @@ export const VersionHistoryDialog = ({
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString(language === 'en' ? 'en-US' : 'ar-SA', {
+
+    if (language === 'ar') {
+      // Arabic with Gregorian calendar
+      const arabicMonths = [
+        'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+        'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+      ];
+
+      const day = date.getDate();
+      const month = arabicMonths[date.getMonth()];
+      const year = date.getFullYear();
+
+      // 12-hour format with AM/PM
+      let hours = date.getHours();
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? 'م' : 'ص'; // م for PM (مساءً), ص for AM (صباحاً)
+      hours = hours % 12 || 12; // Convert to 12-hour format
+
+      return `${day} ${month} ${year}، ${hours}:${minutes} ${ampm}`;
+    }
+
+    return date.toLocaleString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-      hour: '2-digit',
+      hour: 'numeric',
       minute: '2-digit',
+      hour12: true
     });
   };
 

@@ -30,8 +30,8 @@ async def list_jobs(
         # Base query - user can only see their own jobs
         query = db.query(
             ExtractionJob,
-            User.full_name.label('user_name'),
-            Extractor.name.label('extractor_name')
+            User.full_name_en.label('user_name'),
+            Extractor.name_en.label('extractor_name')
         ).join(
             User, ExtractionJob.user_id == User.id
         ).join(
@@ -66,18 +66,28 @@ async def list_jobs(
                 extractor_name=row.extractor_name,
                 file_name=row.ExtractionJob.file_name,
                 status=row.ExtractionJob.status,
-                result_text=row.ExtractionJob.result_text,
+                result_text=row.ExtractionJob.result_content,
                 error_message=row.ExtractionJob.error_message,
                 created_at=row.ExtractionJob.created_at,
-                completed_at=row.ExtractionJob.completed_at
+                completed_at=row.ExtractionJob.completed_at,
+                prompt_tokens=row.ExtractionJob.prompt_tokens,
+                completion_tokens=row.ExtractionJob.completion_tokens,
+                total_tokens=row.ExtractionJob.total_tokens,
+                cached_tokens=row.ExtractionJob.cached_tokens,
+                model_used=row.ExtractionJob.model_used,
+                is_cached_result=row.ExtractionJob.is_cached_result
             )
             for row in results
         ]
 
-        return ExtractionJobListResponse(
+        response = ExtractionJobListResponse(
             total=total,
             jobs=jobs
         )
+
+        logger.info(f"Returning {len(jobs)} jobs out of {total} total for user {current_user.id}")
+
+        return response
 
     except Exception as e:
         logger.error(f"Failed to list jobs: {str(e)}")
@@ -94,8 +104,8 @@ async def get_job(
     try:
         result = db.query(
             ExtractionJob,
-            User.full_name.label('user_name'),
-            Extractor.name.label('extractor_name')
+            User.full_name_en.label('user_name'),
+            Extractor.name_en.label('extractor_name')
         ).join(
             User, ExtractionJob.user_id == User.id
         ).join(
@@ -117,10 +127,16 @@ async def get_job(
             extractor_name=result.extractor_name,
             file_name=result.ExtractionJob.file_name,
             status=result.ExtractionJob.status,
-            result_text=result.ExtractionJob.result_text,
+            result_text=result.ExtractionJob.result_content,
             error_message=result.ExtractionJob.error_message,
             created_at=result.ExtractionJob.created_at,
-            completed_at=result.ExtractionJob.completed_at
+            completed_at=result.ExtractionJob.completed_at,
+            prompt_tokens=result.ExtractionJob.prompt_tokens,
+            completion_tokens=result.ExtractionJob.completion_tokens,
+            total_tokens=result.ExtractionJob.total_tokens,
+            cached_tokens=result.ExtractionJob.cached_tokens,
+            model_used=result.ExtractionJob.model_used,
+            is_cached_result=result.ExtractionJob.is_cached_result
         )
 
     except HTTPException:

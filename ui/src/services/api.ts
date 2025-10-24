@@ -223,6 +223,12 @@ export async function getMyJobs(extractorId?: number, status?: string, limit: nu
     error_message: string | null;
     created_at: string;
     completed_at: string | null;
+    prompt_tokens: number | null;
+    completion_tokens: number | null;
+    total_tokens: number | null;
+    cached_tokens: number | null;
+    model_used: string | null;
+    is_cached_result: boolean;
   }>;
 }> {
   let url = `${API_BASE_URL}/api/jobs?limit=${limit}&offset=${offset}`;
@@ -341,7 +347,7 @@ export async function pollTaskStatus(
   taskId: string,
   onUpdate?: (status: TaskStatus) => void
 ): Promise<TaskStatus> {
-  const maxAttempts = 60; // 60 attempts * 2 seconds = 2 minutes
+  const maxAttempts = 60;
   let attempts = 0;
 
   while (attempts < maxAttempts) {
@@ -355,8 +361,18 @@ export async function pollTaskStatus(
       return status;
     }
 
-    // Wait 2 seconds before next poll
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Adaptive polling: fast at first (for cached results), slower later
+    // First 5 attempts: 500ms (for cached/fast tasks)
+    // Next 10 attempts: 1000ms
+    // After that: 2000ms (for slow LLM calls)
+    let delay = 2000;
+    if (attempts < 5) {
+      delay = 500;
+    } else if (attempts < 15) {
+      delay = 1000;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, delay));
     attempts++;
   }
 

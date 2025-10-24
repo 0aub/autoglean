@@ -34,24 +34,19 @@ function LoginContent() {
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden">
-      {/* Left Side - Animation */}
-      <div className="hidden lg:flex items-center justify-center relative">
-        <WaveAnimation />
-      </div>
+    <div className={`min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden ${language === 'ar' ? 'lg:dir-rtl' : ''}`}>
+      {/* Language Toggle - positioned relative to entire page */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={toggleLanguage}
+        className={`absolute top-4 z-10 ${language === 'ar' ? 'right-4' : 'left-4'}`}
+      >
+        <Languages className="h-5 w-5" />
+      </Button>
 
-      {/* Right Side - Login Form */}
-      <div className="flex items-center justify-center p-8 relative">
-        {/* Language Toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleLanguage}
-          className="absolute top-4 right-4 z-10"
-        >
-          <Languages className="h-5 w-5" />
-        </Button>
-
+      {/* Login Form Side */}
+      <div className="flex items-center justify-center p-8 relative lg:order-1">
         <Card className="w-full max-w-md z-10">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
@@ -131,6 +126,11 @@ function LoginContent() {
           </div>
         </CardContent>
       </Card>
+      </div>
+
+      {/* Animation Side */}
+      <div className="hidden lg:flex items-center justify-center relative lg:order-2">
+        <WaveAnimation />
       </div>
     </div>
   );
