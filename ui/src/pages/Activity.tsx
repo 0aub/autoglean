@@ -321,7 +321,7 @@ function ActivityContent() {
               </TabsTrigger>
               <TabsTrigger value="api-requests" className="gap-2">
                 <Code className="h-4 w-4" />
-                {language === 'en' ? 'My API Requests' : 'طلبات API الخاصة بي'}
+                {language === 'en' ? 'My API Requests' : 'طلبات \u200FAPI\u200F الخاصة بي'}
               </TabsTrigger>
             </TabsList>
 
@@ -646,12 +646,12 @@ function ActivityContent() {
             <div className="text-center py-12">
               <Code className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-lg font-semibold mb-2">
-                {language === 'en' ? 'API Requests' : 'طلبات API'}
+                {language === 'en' ? 'API Requests' : 'طلبات \u200FAPI'}
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
                 {language === 'en'
                   ? 'View your requests made to other extractors via API'
-                  : 'عرض طلباتك المرسلة إلى المستخرجات الأخرى عبر API'}
+                  : 'عرض طلباتك المرسلة إلى المستخرجات الأخرى عبر \u200FAPI'}
               </p>
               <p className="text-xs text-muted-foreground">
                 {language === 'en'

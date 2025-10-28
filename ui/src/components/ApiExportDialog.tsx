@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Key, Copy, Check, Code, BarChart3, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { getAuthToken } from "@/services/auth";
 
@@ -37,7 +38,8 @@ export const ApiExportDialog = ({
   extractorId,
   extractorName,
 }: ApiExportDialogProps) => {
-  const { language } = useLanguage();
+  const { language, direction } = useLanguage();
+  const { user } = useAuth();
   const [apiKeyData, setApiKeyData] = useState<ApiKeyData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -177,15 +179,15 @@ export const ApiExportDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {language === 'en' ? 'API Export' : 'تصدير API'}
+            {language === 'en' ? 'API Export' : 'تصدير \u200FAPI'}
           </DialogTitle>
           <DialogDescription>
             {language === 'en'
               ? `Export "${extractorName}" as an API`
-              : `تصدير "${extractorName}" كـ API`}
+              : `تصدير "${extractorName}" كـ \u200FAPI`}
           </DialogDescription>
         </DialogHeader>
 
@@ -199,12 +201,12 @@ export const ApiExportDialog = ({
                   <Key className="h-5 w-5 text-primary" />
                   <div>
                     <Label htmlFor="api-toggle" className="text-sm font-semibold cursor-pointer">
-                      {language === 'en' ? 'API Status' : 'حالة API'}
+                      {language === 'en' ? 'API Status' : 'حالة \u200FAPI'}
                     </Label>
                     <p className="text-xs text-muted-foreground">
                       {language === 'en'
                         ? apiKeyData.is_active ? 'API is active and accepting requests' : 'API is inactive'
-                        : apiKeyData.is_active ? 'API نشط ويقبل الطلبات' : 'API غير نشط'}
+                        : apiKeyData.is_active ? '\u200FAPI\u200F نشط ويقبل الطلبات' : '\u200FAPI\u200F غير نشط'}
                     </p>
                   </div>
                 </div>
@@ -219,7 +221,7 @@ export const ApiExportDialog = ({
               {/* API Key Display */}
               <div>
                 <Label className="text-sm font-semibold mb-2 block">
-                  {language === 'en' ? 'API Key' : 'مفتاح API'}
+                  {language === 'en' ? 'API Key' : 'مفتاح \u200FAPI'}
                 </Label>
                 <div className="flex gap-2">
                   <Input
@@ -247,7 +249,7 @@ export const ApiExportDialog = ({
                 <BarChart3 className="h-5 w-5 text-primary" />
                 <div className="flex-1">
                   <Label className="text-sm font-semibold">
-                    {language === 'en' ? 'Total API Requests' : 'إجمالي طلبات API'}
+                    {language === 'en' ? 'Total API Requests' : 'إجمالي طلبات \u200FAPI'}
                   </Label>
                   <p className="text-2xl font-bold">{apiKeyData.usage_count}</p>
                 </div>
@@ -284,7 +286,7 @@ export const ApiExportDialog = ({
                     <TabsTrigger value="nodejs">Node.js</TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="overview" className="space-y-3">
+                  <TabsContent value="overview" className="space-y-3" dir={direction}>
                     <div>
                       <p className="text-xs text-muted-foreground mb-2">
                         {language === 'en' ? 'Endpoint:' : 'نقطة النهاية:'}
@@ -298,7 +300,7 @@ export const ApiExportDialog = ({
                         {language === 'en' ? 'Required parameters:' : 'المعاملات المطلوبة:'}
                       </p>
                       <ul className="text-xs text-muted-foreground space-y-1">
-                        <li>• <code className="bg-muted px-1 rounded">api_key</code>: {language === 'en' ? 'Your API key' : 'مفتاح API الخاص بك'}</li>
+                        <li>• <code className="bg-muted px-1 rounded">api_key</code>: {language === 'en' ? 'Your API key' : 'مفتاح \u200FAPI\u200F الخاص بك'}</li>
                         <li>• <code className="bg-muted px-1 rounded">user_id</code>: {language === 'en' ? 'Your user ID' : 'معرف المستخدم الخاص بك'}</li>
                         <li>• <code className="bg-muted px-1 rounded">label</code>: {language === 'en' ? 'Label for this request' : 'تسمية لهذا الطلب'}</li>
                         <li>• <code className="bg-muted px-1 rounded">file</code>: {language === 'en' ? 'The file to extract from' : 'الملف المراد استخراج البيانات منه'}</li>
@@ -315,7 +317,7 @@ url = "http://localhost:8001/api/v1/extract"
 
 # Your API credentials
 api_key = "${apiKeyData?.api_key || 'your-api-key'}"
-user_id = 1  # Your user ID
+user_id = ${user?.id || 'YOUR_USER_ID'}  # Your user ID
 
 # Prepare the request
 files = {
@@ -354,7 +356,7 @@ const url = 'http://localhost:8001/api/v1/extract';
 
 // Your API credentials
 const apiKey = '${apiKeyData?.api_key || 'your-api-key'}';
-const userId = 1; // Your user ID
+const userId = ${user?.id || 'YOUR_USER_ID'}; // Your user ID
 
 // Create form data
 const form = new FormData();
@@ -391,16 +393,16 @@ axios.post(url, form, {
             <div className="text-center py-8">
               <Key className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-lg font-semibold mb-2">
-                {language === 'en' ? 'No API Key Yet' : 'لا يوجد مفتاح API بعد'}
+                {language === 'en' ? 'No API Key Yet' : 'لا يوجد مفتاح \u200FAPI\u200F بعد'}
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
                 {language === 'en'
                   ? 'Create an API key to export this extractor as an API'
-                  : 'أنشئ مفتاح API لتصدير هذا المستخرج كـ API'}
+                  : 'أنشئ مفتاح \u200FAPI\u200F لتصدير هذا المستخرج كـ \u200FAPI'}
               </p>
               <Button onClick={handleCreateApiKey} disabled={isLoading}>
                 <Key className="h-4 w-4 mr-2" />
-                {language === 'en' ? 'Create API Key' : 'إنشاء مفتاح API'}
+                {language === 'en' ? 'Create API Key' : 'إنشاء مفتاح \u200FAPI'}
               </Button>
             </div>
           )}
