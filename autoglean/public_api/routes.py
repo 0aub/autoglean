@@ -65,7 +65,8 @@ async def public_extract(
 
         # 4. Save uploaded file
         job_id = str(uuid.uuid4())
-        file_path = storage_manager.save_document(file.file, file.filename, job_id)
+        file_content = await file.read()
+        file_path = storage_manager.save_uploaded_file(file_content, file.filename, job_id)
 
         logger.info(f"API extraction - File saved: {file_path}")
 

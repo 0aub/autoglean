@@ -64,11 +64,21 @@ def extract_document_task(
         logger.info(f"Starting extraction job: {job_id}")
         logger.info(f"Extractor: {extractor_id}, File: {file_path}")
 
-        # Update database: mark as processing
+        # Query for both job types (regular and API)
         job = db.query(ExtractionJob).filter(ExtractionJob.job_id == job_id).first()
+        api_job = db.query(ApiExtractionJob).filter(ApiExtractionJob.job_id == job_id).first()
+
+        # Determine which job type this is and get the database extractor ID
+        db_extractor_id = None
         if job:
+            db_extractor_id = job.extractor_id
             job.status = "processing"
             job.started_at = datetime.utcnow()
+            db.commit()
+        elif api_job:
+            db_extractor_id = api_job.extractor_id
+            api_job.status = "processing"
+            api_job.started_at = datetime.utcnow()
             db.commit()
 
         # Update task state
@@ -82,15 +92,17 @@ def extract_document_task(
         from pathlib import Path
         file_name = Path(file_path).name
 
-        cached_job = db.query(ExtractionJob).filter(
-            ExtractionJob.file_name == file_name,
-            ExtractionJob.extractor_id == job.extractor_id,
-            ExtractionJob.status.in_(["success", "completed"]),  # Support both statuses
-            ExtractionJob.result_content != None,
-            ExtractionJob.id != job.id  # Don't match itself
-        ).order_by(
-            ExtractionJob.completed_at.desc()
-        ).first()
+        cached_job = None
+        if db_extractor_id:
+            cached_job = db.query(ExtractionJob).filter(
+                ExtractionJob.file_name == file_name,
+                ExtractionJob.extractor_id == db_extractor_id,
+                ExtractionJob.status.in_(["success", "completed"]),  # Support both statuses
+                ExtractionJob.result_content != None,
+                ExtractionJob.id != (job.id if job else -1)  # Don't match itself
+            ).order_by(
+                ExtractionJob.completed_at.desc()
+            ).first()
 
         is_cached = False
         if cached_job:
@@ -144,11 +156,10 @@ def extract_document_task(
             db.commit()
 
             # Update usage stats (only for non-cached results)
-            if not is_cached:
-                _update_usage_stats(db, job.extractor_id)
+            if not is_cached and db_extractor_id:
+                _update_usage_stats(db, db_extractor_id)
 
         # Also update API extraction job if this is an API request
-        api_job = db.query(ApiExtractionJob).filter(ApiExtractionJob.job_id == job_id).first()
         if api_job:
             api_job.status = "completed"
             api_job.result_content = result.get('result_content', '')
@@ -179,18 +190,17 @@ def extract_document_task(
         logger.error(f"Extraction failed for job {job_id}: {str(e)}", exc_info=True)
 
         # Update database: mark as failed
-        job = db.query(ExtractionJob).filter(ExtractionJob.job_id == job_id).first()
         if job:
             job.status = "failed"  # Use "failed" to match existing jobs
             job.error_message = str(e)
             job.completed_at = datetime.utcnow()
             db.commit()
 
-            # Update usage stats (count failures too)
-            _update_usage_stats(db, job.extractor_id, success=False)
+        # Update usage stats (count failures too)
+        if db_extractor_id:
+            _update_usage_stats(db, db_extractor_id, success=False)
 
         # Also update API extraction job if this is an API request
-        api_job = db.query(ApiExtractionJob).filter(ApiExtractionJob.job_id == job_id).first()
         if api_job:
             api_job.status = "failed"
             api_job.error_message = str(e)
