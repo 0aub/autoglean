@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { FileText, Clock, CheckCircle, XCircle, Loader2, Eye, Download, ChevronLeft, ChevronRight, Copy, Calendar } from 'lucide-react';
+import { FileText, Clock, CheckCircle, XCircle, Loader2, Eye, Download, ChevronLeft, ChevronRight, Copy, Calendar, Code } from 'lucide-react';
 import { getMyJobs } from '@/services/api';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Job {
   id: number;
@@ -310,14 +311,28 @@ function ActivityContent() {
             <h1 className="text-3xl font-bold mb-2">
               {language === 'en' ? 'My Activity' : 'نشاطي'}
             </h1>
-            <p className="text-muted-foreground">
-              {language === 'en'
-                ? `${total} extraction jobs`
-                : `${total} عملية استخراج`}
-            </p>
           </div>
 
-          {/* Filters and Pagination Controls */}
+          <Tabs defaultValue="extraction-jobs" className="w-full">
+            <TabsList className="mb-6">
+              <TabsTrigger value="extraction-jobs">
+                <FileText className="h-4 w-4 mr-2" />
+                {language === 'en' ? 'Extraction Jobs' : 'مهام الاستخراج'}
+              </TabsTrigger>
+              <TabsTrigger value="api-requests">
+                <Code className="h-4 w-4 mr-2" />
+                {language === 'en' ? 'My API Requests' : 'طلبات API الخاصة بي'}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="extraction-jobs">
+              <p className="text-muted-foreground mb-4">
+                {language === 'en'
+                  ? `${total} extraction jobs`
+                  : `${total} عملية استخراج`}
+              </p>
+
+              {/* Filters and Pagination Controls */}
           <div className="mb-4 flex flex-wrap gap-4 items-center justify-between">
             <div className="flex gap-4 items-center flex-wrap">
               {/* Date Range Filter */}
@@ -624,6 +639,31 @@ function ActivityContent() {
             </div>
           )}
         </div>
+      </TabsContent>
+
+      <TabsContent value="api-requests">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-12">
+              <Code className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-2">
+                {language === 'en' ? 'API Requests' : 'طلبات API'}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {language === 'en'
+                  ? 'View your requests made to other extractors via API'
+                  : 'عرض طلباتك المرسلة إلى المستخرجات الأخرى عبر API'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {language === 'en'
+                  ? 'Coming soon...'
+                  : 'قريباً...'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
       </div>
 
       {/* Result Dialog */}
