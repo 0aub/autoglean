@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Key, Copy, Check, Code, BarChart3, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
@@ -109,7 +111,9 @@ export const ApiExportDialog = ({
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ is_active: checked }),
       });
 
       if (!response.ok) {
@@ -263,30 +267,123 @@ export const ApiExportDialog = ({
               </div>
 
               {/* API Documentation */}
-              <div className="p-4 border rounded-lg bg-accent/10">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="border rounded-lg bg-accent/10">
+                <div className="flex items-center gap-2 p-4 pb-0">
                   <Code className="h-4 w-4 text-primary" />
                   <Label className="text-sm font-semibold">
                     {language === 'en' ? 'How to Use' : 'كيفية الاستخدام'}
                   </Label>
                 </div>
-                <p className="text-xs text-muted-foreground mb-2">
-                  {language === 'en'
-                    ? 'Send a POST request to:'
-                    : 'أرسل طلب POST إلى:'}
-                </p>
-                <code className="block text-xs bg-muted p-2 rounded mb-2 break-all">
-                  POST http://localhost:8001/api/v1/extract
-                </code>
-                <p className="text-xs text-muted-foreground mb-1">
-                  {language === 'en' ? 'Required parameters:' : 'المعاملات المطلوبة:'}
-                </p>
-                <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                  <li><code>api_key</code>: {language === 'en' ? 'Your API key' : 'مفتاح API الخاص بك'}</li>
-                  <li><code>user_id</code>: {language === 'en' ? 'Your user ID' : 'معرف المستخدم الخاص بك'}</li>
-                  <li><code>label</code>: {language === 'en' ? 'Label for this request' : 'تسمية لهذا الطلب'}</li>
-                  <li><code>file</code>: {language === 'en' ? 'The file to extract from' : 'الملف المراد استخراج البيانات منه'}</li>
-                </ul>
+
+                <Tabs defaultValue="overview" className="w-full p-4">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="overview">
+                      {language === 'en' ? 'Overview' : 'نظرة عامة'}
+                    </TabsTrigger>
+                    <TabsTrigger value="python">Python</TabsTrigger>
+                    <TabsTrigger value="nodejs">Node.js</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="overview" className="space-y-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {language === 'en' ? 'Endpoint:' : 'نقطة النهاية:'}
+                      </p>
+                      <code className="block text-xs bg-muted p-2 rounded break-all">
+                        POST http://localhost:8001/api/v1/extract
+                      </code>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {language === 'en' ? 'Required parameters:' : 'المعاملات المطلوبة:'}
+                      </p>
+                      <ul className="text-xs text-muted-foreground space-y-1">
+                        <li>• <code className="bg-muted px-1 rounded">api_key</code>: {language === 'en' ? 'Your API key' : 'مفتاح API الخاص بك'}</li>
+                        <li>• <code className="bg-muted px-1 rounded">user_id</code>: {language === 'en' ? 'Your user ID' : 'معرف المستخدم الخاص بك'}</li>
+                        <li>• <code className="bg-muted px-1 rounded">label</code>: {language === 'en' ? 'Label for this request' : 'تسمية لهذا الطلب'}</li>
+                        <li>• <code className="bg-muted px-1 rounded">file</code>: {language === 'en' ? 'The file to extract from' : 'الملف المراد استخراج البيانات منه'}</li>
+                      </ul>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="python">
+                    <ScrollArea className="h-[200px]">
+                      <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">
+{`import requests
+
+url = "http://localhost:8001/api/v1/extract"
+
+# Your API credentials
+api_key = "${apiKeyData?.api_key || 'your-api-key'}"
+user_id = 1  # Your user ID
+
+# Prepare the request
+files = {
+    'file': open('document.pdf', 'rb')
+}
+data = {
+    'api_key': api_key,
+    'user_id': user_id,
+    'label': 'My extraction request'
+}
+
+# Make the request
+response = requests.post(url, files=files, data=data)
+
+# Get the task ID
+result = response.json()
+task_id = result['task_id']
+print(f"Task ID: {task_id}")
+
+# Check status
+status_url = f"http://localhost:8001/api/v1/extract/{task_id}"
+status_response = requests.get(status_url)
+print(status_response.json())`}
+                      </pre>
+                    </ScrollArea>
+                  </TabsContent>
+
+                  <TabsContent value="nodejs">
+                    <ScrollArea className="h-[200px]">
+                      <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">
+{`const FormData = require('form-data');
+const fs = require('fs');
+const axios = require('axios');
+
+const url = 'http://localhost:8001/api/v1/extract';
+
+// Your API credentials
+const apiKey = '${apiKeyData?.api_key || 'your-api-key'}';
+const userId = 1; // Your user ID
+
+// Create form data
+const form = new FormData();
+form.append('file', fs.createReadStream('document.pdf'));
+form.append('api_key', apiKey);
+form.append('user_id', userId);
+form.append('label', 'My extraction request');
+
+// Make the request
+axios.post(url, form, {
+  headers: form.getHeaders()
+})
+.then(response => {
+  const taskId = response.data.task_id;
+  console.log('Task ID:', taskId);
+
+  // Check status
+  return axios.get(\`http://localhost:8001/api/v1/extract/\${taskId}\`);
+})
+.then(statusResponse => {
+  console.log(statusResponse.data);
+})
+.catch(error => {
+  console.error('Error:', error.message);
+});`}
+                      </pre>
+                    </ScrollArea>
+                  </TabsContent>
+                </Tabs>
               </div>
             </>
           ) : (

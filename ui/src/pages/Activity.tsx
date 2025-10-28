@@ -512,7 +512,7 @@ function ActivityContent() {
             <div className="space-y-3">
               {jobs.map((job) => (
                 <Card key={job.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
+                  <CardContent className="p-4" dir={direction}>
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 flex-1">
                         <div className="mt-1">
