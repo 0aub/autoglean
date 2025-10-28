@@ -12,7 +12,7 @@ interface LanguageContextType {
 
 const translations = {
   en: {
-    appName: 'AutoGlean',
+    appName: 'AutoGlean Platform',
     welcome: 'Welcome',
     recipes: 'Extractors',
     newExtractor: 'New Extractor',
@@ -51,7 +51,7 @@ const translations = {
     delete: 'Delete',
   },
   ar: {
-    appName: 'الاستخراج الذكي',
+    appName: 'منصة الاستخراج الذكي',
     welcome: 'مرحباً',
     recipes: 'المستخرجات',
     newExtractor: 'مستخرج جديد',
