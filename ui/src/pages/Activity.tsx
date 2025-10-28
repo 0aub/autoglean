@@ -638,7 +638,6 @@ function ActivityContent() {
               </div>
             </div>
           )}
-        </div>
       </TabsContent>
 
       <TabsContent value="api-requests">
