@@ -53,7 +53,7 @@ interface Job {
 }
 
 function ActivityContent() {
-  const { language } = useLanguage();
+  const { language, direction } = useLanguage();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -305,7 +305,7 @@ function ActivityContent() {
   return (
     <div className="h-screen flex flex-col bg-background">
       <Header />
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-6" dir={direction}>
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
             <h1 className="text-3xl font-bold mb-2">
@@ -314,13 +314,13 @@ function ActivityContent() {
           </div>
 
           <Tabs defaultValue="extraction-jobs" className="w-full">
-            <TabsList className="mb-6">
-              <TabsTrigger value="extraction-jobs">
-                <FileText className="h-4 w-4 mr-2" />
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="extraction-jobs" className="gap-2">
+                <FileText className="h-4 w-4" />
                 {language === 'en' ? 'Extraction Jobs' : 'مهام الاستخراج'}
               </TabsTrigger>
-              <TabsTrigger value="api-requests">
-                <Code className="h-4 w-4 mr-2" />
+              <TabsTrigger value="api-requests" className="gap-2">
+                <Code className="h-4 w-4" />
                 {language === 'en' ? 'My API Requests' : 'طلبات API الخاصة بي'}
               </TabsTrigger>
             </TabsList>

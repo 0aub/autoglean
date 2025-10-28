@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Key, Copy, Check, Code, BarChart3, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
+import { getAuthToken } from "@/services/auth";
 
 interface ApiExportDialogProps {
   open: boolean;
@@ -49,7 +50,7 @@ export const ApiExportDialog = ({
   const loadApiKey = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(`http://localhost:8001/api/extractors/${extractorId}/api-export`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -76,7 +77,7 @@ export const ApiExportDialog = ({
   const handleCreateApiKey = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(`http://localhost:8001/api/extractors/${extractorId}/api-export`, {
         method: 'POST',
         headers: {
@@ -103,7 +104,7 @@ export const ApiExportDialog = ({
   const handleToggleActive = async (checked: boolean) => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(`http://localhost:8001/api/extractors/${extractorId}/api-export/toggle`, {
         method: 'PUT',
         headers: {
@@ -138,7 +139,7 @@ export const ApiExportDialog = ({
 
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       const response = await fetch(`http://localhost:8001/api/extractors/${extractorId}/api-export`, {
         method: 'POST',
         headers: {
