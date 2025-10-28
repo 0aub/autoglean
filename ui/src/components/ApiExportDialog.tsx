@@ -179,7 +179,7 @@ export const ApiExportDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>
             {language === 'en' ? 'API Export' : 'تصدير \u200FAPI'}
@@ -191,38 +191,61 @@ export const ApiExportDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* API Key Status */}
           {apiKeyData ? (
             <>
-              {/* Activation Toggle */}
-              <div className="flex items-center justify-between p-4 border rounded-lg bg-accent/20">
-                <div className="flex items-center gap-3">
-                  <Key className="h-5 w-5 text-primary" />
-                  <div>
-                    <Label htmlFor="api-toggle" className="text-sm font-semibold cursor-pointer">
-                      {language === 'en' ? 'API Status' : 'حالة \u200FAPI'}
+              {/* Activation Toggle and Stats */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-accent/20">
+                  <div className="flex items-center gap-2">
+                    <Key className="h-4 w-4 text-primary" />
+                    <div>
+                      <Label htmlFor="api-toggle" className="text-xs font-semibold cursor-pointer">
+                        {language === 'en' ? 'API Status' : 'حالة \u200FAPI'}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {language === 'en'
+                          ? apiKeyData.is_active ? 'Active' : 'Inactive'
+                          : apiKeyData.is_active ? 'نشط' : 'غير نشط'}
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="api-toggle"
+                    checked={apiKeyData.is_active}
+                    onCheckedChange={handleToggleActive}
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div className="flex items-center gap-3 p-3 border rounded-lg">
+                  <BarChart3 className="h-4 w-4 text-primary" />
+                  <div className="flex-1">
+                    <Label className="text-xs font-semibold">
+                      {language === 'en' ? 'Total Requests' : 'إجمالي الطلبات'}
                     </Label>
-                    <p className="text-xs text-muted-foreground">
-                      {language === 'en'
-                        ? apiKeyData.is_active ? 'API is active and accepting requests' : 'API is inactive'
-                        : apiKeyData.is_active ? '\u200FAPI\u200F نشط ويقبل الطلبات' : '\u200FAPI\u200F غير نشط'}
-                    </p>
+                    <p className="text-xl font-bold">{apiKeyData.usage_count}</p>
                   </div>
                 </div>
-                <Switch
-                  id="api-toggle"
-                  checked={apiKeyData.is_active}
-                  onCheckedChange={handleToggleActive}
-                  disabled={isLoading}
-                />
               </div>
 
               {/* API Key Display */}
               <div>
-                <Label className="text-sm font-semibold mb-2 block">
-                  {language === 'en' ? 'API Key' : 'مفتاح \u200FAPI'}
-                </Label>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-semibold">
+                    {language === 'en' ? 'API Key' : 'مفتاح \u200FAPI'}
+                  </Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRegenerateKey}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    {language === 'en' ? 'Regenerate' : 'تجديد'}
+                  </Button>
+                </div>
                 <div className="flex gap-2">
                   <Input
                     value={apiKeyData.api_key}
@@ -244,62 +267,38 @@ export const ApiExportDialog = ({
                 </p>
               </div>
 
-              {/* Usage Statistics */}
-              <div className="flex items-center gap-3 p-4 border rounded-lg">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                <div className="flex-1">
-                  <Label className="text-sm font-semibold">
-                    {language === 'en' ? 'Total API Requests' : 'إجمالي طلبات \u200FAPI'}
-                  </Label>
-                  <p className="text-2xl font-bold">{apiKeyData.usage_count}</p>
-                </div>
-              </div>
-
-              {/* Regenerate Key */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={handleRegenerateKey}
-                  disabled={isLoading}
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  {language === 'en' ? 'Regenerate Key' : 'تجديد المفتاح'}
-                </Button>
-              </div>
-
               {/* API Documentation */}
               <div className="border rounded-lg bg-accent/10">
-                <div className="flex items-center gap-2 p-4 pb-0">
+                <div className="flex items-center gap-2 p-3 pb-0">
                   <Code className="h-4 w-4 text-primary" />
                   <Label className="text-sm font-semibold">
                     {language === 'en' ? 'How to Use' : 'كيفية الاستخدام'}
                   </Label>
                 </div>
 
-                <Tabs defaultValue="overview" className="w-full p-4">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="overview">
+                <Tabs defaultValue="overview" className="w-full p-3">
+                  <TabsList className="grid w-full grid-cols-3 h-8">
+                    <TabsTrigger value="overview" className="text-xs">
                       {language === 'en' ? 'Overview' : 'نظرة عامة'}
                     </TabsTrigger>
-                    <TabsTrigger value="python">Python</TabsTrigger>
-                    <TabsTrigger value="nodejs">Node.js</TabsTrigger>
+                    <TabsTrigger value="python" className="text-xs">Python</TabsTrigger>
+                    <TabsTrigger value="nodejs" className="text-xs">Node.js</TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="overview" className="space-y-3" dir={direction}>
+                  <TabsContent value="overview" className="space-y-2 mt-2" dir={direction}>
                     <div>
-                      <p className="text-xs text-muted-foreground mb-2">
+                      <p className="text-xs text-muted-foreground mb-1">
                         {language === 'en' ? 'Endpoint:' : 'نقطة النهاية:'}
                       </p>
-                      <code className="block text-xs bg-muted p-2 rounded break-all">
+                      <code className="block text-xs bg-muted px-2 py-1 rounded break-all">
                         POST http://localhost:8001/api/v1/extract
                       </code>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground mb-2">
+                      <p className="text-xs text-muted-foreground mb-1">
                         {language === 'en' ? 'Required parameters:' : 'المعاملات المطلوبة:'}
                       </p>
-                      <ul className="text-xs text-muted-foreground space-y-1">
+                      <ul className="text-xs text-muted-foreground space-y-0.5">
                         <li>• <code className="bg-muted px-1 rounded">api_key</code>: {language === 'en' ? 'Your API key' : 'مفتاح \u200FAPI\u200F الخاص بك'}</li>
                         <li>• <code className="bg-muted px-1 rounded">user_id</code>: {language === 'en' ? 'Your user ID' : 'معرف المستخدم الخاص بك'}</li>
                         <li>• <code className="bg-muted px-1 rounded">label</code>: {language === 'en' ? 'Label for this request' : 'تسمية لهذا الطلب'}</li>
@@ -308,9 +307,9 @@ export const ApiExportDialog = ({
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="python">
-                    <ScrollArea className="h-[200px]">
-                      <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">
+                  <TabsContent value="python" className="mt-2">
+                    <ScrollArea className="h-[180px] w-full">
+                      <pre className="text-xs bg-muted p-2 rounded overflow-x-auto whitespace-pre-wrap break-words">
 {`import requests
 
 url = "http://localhost:8001/api/v1/extract"
@@ -345,9 +344,9 @@ print(status_response.json())`}
                     </ScrollArea>
                   </TabsContent>
 
-                  <TabsContent value="nodejs">
-                    <ScrollArea className="h-[200px]">
-                      <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">
+                  <TabsContent value="nodejs" className="mt-2">
+                    <ScrollArea className="h-[180px] w-full">
+                      <pre className="text-xs bg-muted p-2 rounded overflow-x-auto whitespace-pre-wrap break-words">
 {`const FormData = require('form-data');
 const fs = require('fs');
 const axios = require('axios');

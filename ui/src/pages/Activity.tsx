@@ -321,7 +321,7 @@ function ActivityContent() {
               </TabsTrigger>
               <TabsTrigger value="api-requests" className="gap-2">
                 <Code className="h-4 w-4" />
-                {language === 'en' ? 'My API Requests' : 'طلبات \u200FAPI\u200F الخاصة بي'}
+                {language === 'en' ? 'My API Requests' : <>طلباتي عبر <span dir="ltr">API</span></>}
               </TabsTrigger>
             </TabsList>
 
