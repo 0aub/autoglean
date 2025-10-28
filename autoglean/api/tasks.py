@@ -8,7 +8,7 @@ from autoglean.api.celery_app import celery_app
 from autoglean.extractors.document import get_document_extractor
 from autoglean.core.storage import get_storage_manager
 from autoglean.db.base import get_db
-from autoglean.db.models import ExtractionJob, ExtractorUsageStats
+from autoglean.db.models import ExtractionJob, ExtractorUsageStats, ApiExtractionJob
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +147,28 @@ def extract_document_task(
             if not is_cached:
                 _update_usage_stats(db, job.extractor_id)
 
+        # Also update API extraction job if this is an API request
+        api_job = db.query(ApiExtractionJob).filter(ApiExtractionJob.job_id == job_id).first()
+        if api_job:
+            api_job.status = "completed"
+            api_job.result_content = result.get('result_content', '')
+            api_job.result_path = result.get('result_path', '')
+            api_job.completed_at = datetime.utcnow()
+            api_job.is_cached_result = is_cached
+
+            if 'usage' in result:
+                usage = result['usage']
+                api_job.prompt_tokens = usage.get('prompt_tokens')
+                api_job.completion_tokens = usage.get('completion_tokens')
+                api_job.total_tokens = usage.get('total_tokens')
+                api_job.cached_tokens = usage.get('cached_tokens')
+
+            if 'model' in result:
+                api_job.model_used = result['model']
+
+            db.commit()
+            logger.info(f"API extraction job {job_id} marked as completed")
+
         return {
             'status': 'completed',
             'job_id': job_id,
@@ -166,6 +188,15 @@ def extract_document_task(
 
             # Update usage stats (count failures too)
             _update_usage_stats(db, job.extractor_id, success=False)
+
+        # Also update API extraction job if this is an API request
+        api_job = db.query(ApiExtractionJob).filter(ApiExtractionJob.job_id == job_id).first()
+        if api_job:
+            api_job.status = "failed"
+            api_job.error_message = str(e)
+            api_job.completed_at = datetime.utcnow()
+            db.commit()
+            logger.info(f"API extraction job {job_id} marked as failed")
 
         # Return error as a dict instead of raising to avoid Celery serialization issues
         return {

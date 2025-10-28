@@ -29,6 +29,9 @@ from autoglean.auth.routes import router as auth_router
 from autoglean.extractors.routes import router as extractors_router
 from autoglean.jobs.routes import router as jobs_router
 from autoglean.leaderboard.routes import router as leaderboard_router
+from autoglean.extractor_api.routes import router as extractor_api_router
+from autoglean.public_api.routes import router as public_api_router
+from autoglean.analytics.routes import router as analytics_router
 from autoglean.auth.dependencies import get_current_active_user
 from autoglean.db.base import get_db
 from autoglean.jobs.service import create_extraction_job
@@ -67,6 +70,9 @@ app.include_router(auth_router)
 app.include_router(extractors_router)
 app.include_router(jobs_router)
 app.include_router(leaderboard_router)
+app.include_router(extractor_api_router)
+app.include_router(public_api_router)  # Public API - no auth required
+app.include_router(analytics_router)
 
 
 # === Health Check ===

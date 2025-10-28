@@ -131,6 +131,7 @@ class Extractor(Base):
     jobs = relationship("ExtractionJob", back_populates="extractor")
     usage_stats = relationship("ExtractorUsageStats", back_populates="extractor", uselist=False, cascade="all, delete-orphan")
     ratings = relationship("ExtractorRating", back_populates="extractor", cascade="all, delete-orphan")
+    api_key = relationship("ExtractorApiKey", back_populates="extractor", uselist=False, cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("idx_extractor_owner_visibility", "owner_id", "visibility"),
@@ -300,3 +301,62 @@ class ExtractorRating(Base):
 
     def __repr__(self):
         return f"<ExtractorRating(extractor_id={self.extractor_id}, user_id={self.user_id}, rating={self.rating})>"
+
+
+class ExtractorApiKey(Base):
+    """Extractor API keys table - for exporting extractors as APIs."""
+    __tablename__ = "extractor_api_keys"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    extractor_id: Mapped[int] = mapped_column(Integer, ForeignKey("extractors.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
+    api_key: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_by_user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    extractor = relationship("Extractor", back_populates="api_key")
+    created_by = relationship("User")
+    api_jobs = relationship("ApiExtractionJob", back_populates="api_key_rel")
+
+    def __repr__(self):
+        return f"<ExtractorApiKey(extractor_id={self.extractor_id}, is_active={self.is_active})>"
+
+
+class ApiExtractionJob(Base):
+    """API extraction jobs table - tracking API usage of extractors."""
+    __tablename__ = "api_extraction_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    job_id: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
+    api_key_id: Mapped[int] = mapped_column(Integer, ForeignKey("extractor_api_keys.id", ondelete="CASCADE"), nullable=False, index=True)
+    extractor_id: Mapped[int] = mapped_column(Integer, ForeignKey("extractors.id", ondelete="CASCADE"), nullable=False, index=True)
+    requester_user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    request_label: Mapped[str] = mapped_column(String(512), nullable=False)
+    file_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")  # pending, processing, completed, failed
+    result_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    result_path: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Token usage
+    prompt_tokens: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    completion_tokens: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    total_tokens: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    cached_tokens: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    model_used: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    is_cached_result: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Timing
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # Relationships
+    api_key_rel = relationship("ExtractorApiKey", back_populates="api_jobs")
+    extractor = relationship("Extractor")
+    requester = relationship("User")
+
+    def __repr__(self):
+        return f"<ApiExtractionJob(job_id='{self.job_id}', status='{self.status}', label='{self.request_label}')>"
