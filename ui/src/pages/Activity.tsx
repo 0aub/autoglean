@@ -713,6 +713,7 @@ function ActivityContent() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
