@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ShareExtractorDialog } from "./ShareExtractorDialog";
+import { ApiExportDialog } from "./ApiExportDialog";
 import { RateExtractorDialog } from "./RateExtractorDialog";
 import { VersionHistoryDialog } from "./VersionHistoryDialog";
 import { getCachedResult, setCachedResult } from "@/lib/cache";
@@ -36,6 +37,7 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
   const [selectedResultIndex, setSelectedResultIndex] = useState<number>(0);
   const [filePreviewContent, setFilePreviewContent] = useState<string>('');
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [isApiExportDialogOpen, setIsApiExportDialogOpen] = useState(false);
   const [isRateDialogOpen, setIsRateDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
 
@@ -370,14 +372,24 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
               {/* Action Buttons */}
               <div className="flex gap-2">
                 {isOwner && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsShareDialogOpen(true)}
-                  >
-                    <Share2 className="h-4 w-4 mr-2" />
-                    {language === 'en' ? 'Share' : 'مشاركة'}
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsShareDialogOpen(true)}
+                    >
+                      <Share2 className="h-4 w-4 mr-2" />
+                      {language === 'en' ? 'Share' : 'مشاركة'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsApiExportDialogOpen(true)}
+                    >
+                      <Code className="h-4 w-4 mr-2" />
+                      {language === 'en' ? 'API Export' : 'تصدير API'}
+                    </Button>
+                  </>
                 )}
                 {showHistory && (
                   <Button
@@ -425,6 +437,16 @@ export const ExtractorView = ({ extractor }: ExtractorViewProps) => {
           extractorName={displayName}
           currentVisibility={extractor.visibility}
           onVisibilityChange={() => window.location.reload()}
+        />
+      )}
+
+      {/* API Export Dialog */}
+      {isOwner && (
+        <ApiExportDialog
+          open={isApiExportDialogOpen}
+          onOpenChange={setIsApiExportDialogOpen}
+          extractorId={Number(extractor.id)}
+          extractorName={displayName}
         />
       )}
 
